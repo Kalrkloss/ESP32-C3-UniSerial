@@ -1,10 +1,14 @@
+Original project: [aliengreen/esp32_uart_bridge](https://github.com/aliengreen/esp32_uart_bridge).
+
+This is an independent, substantial redesign of the original project. It is maintained as a separate repository because the planned architecture and feature set differ significantly from the upstream project. The original GPL-3.0 license and attribution are retained.
+
+# ESP32-C3-UniSerial
+
 | Supported Target | ESP32-C3 |
 | ---------------- | -------- |
 
-# ESP32-C3 UART Bridge
-
-The ESP32-C3 UART Bridge is an ESP-IDF project. This makes the ESP32-C3 act as USB to serial UART interface like FT232R or CP210x.
-The communication is transferred in both directions between the Computer and the target MCU through the ESP32-C3 UART Bridge.
+ESP32-C3-UniSerial is an ESP-IDF project that bridges USB Serial/JTAG and a hardware UART. The current firmware uses independent transfer tasks to reduce bridge latency.
+Data is transferred in both directions between the computer and the target MCU.
 
 > NOTE: Firmware tested on ESP32-C3. But it may work in other ESP32 family.
 
@@ -80,7 +84,8 @@ The default Kconfig values can be changed such as: `UBRIDGE_UART_BAUD_RATE`, `UB
 idf.py menuconfig
 ```
 
-> NOTE: The default baud rate is `57600` and port number `0`
+> NOTE: This repository defaults to `115200` baud and UART port `1` on the ESP32-C3.
+> The ESP32-C3 USB Serial/JTAG controller ignores the host's CDC line-coding baud value, so changing the terminal's baud rate does not change the UART baud rate. Configure the UART rate in `sdkconfig.defaults` or with `idf.py menuconfig`.
 >
 > WARNING: The parity setting by default selected `none`. If you are going to flash STM32 using the ST serial bootloader you MUST select `even` parity. 
 
@@ -93,6 +98,4 @@ idf.py set-target esp32c3
 idf.py build
 idf.py -p PORT flash
 ```
-
-
 

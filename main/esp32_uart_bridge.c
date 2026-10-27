@@ -32,12 +32,15 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "driver/usb_serial_jtag.h"
+#include "esp_log.h"
 #include "esp_task_wdt.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "freertos/task.h"
 #include "hal/usb_serial_jtag_ll.h"
 #include "sdkconfig.h"
@@ -52,6 +55,11 @@
 #define UBRIDGE_TASK_STACK_SIZE CONFIG_UBRIDGE_TASK_STACK_SIZE
 
 #define BUF_SIZE 512
+
+static const char *TAG = "uart_bridge";
+static uint8_t usb_to_uart_buffer[BUF_SIZE];
+static uint8_t uart_to_usb_buffer[BUF_SIZE];
+static QueueHandle_t uart_queue;
 
 #define DVAL2(x) #x
 #define DVAL(x) DVAL2(x)
@@ -80,6 +88,61 @@ void run_mode() {
   gpio_set_level(GPIO_OUTPUT_IO_NRST, 0);  // NRST = LOW
   vTaskDelay(20 / portTICK_PERIOD_MS);
   gpio_set_level(GPIO_OUTPUT_IO_NRST, 1); // NRST = HIGH
+}
+
+/* ----------------------------------------------------------- */
+
+static void usb_to_uart_task(void *arg) {
+  while (true) {
+    int len = usb_serial_jtag_read_bytes(usb_to_uart_buffer, BUF_SIZE,
+                                         portMAX_DELAY);
+    if (len > 0) {
+      int written = uart_write_bytes(UBRIDGE_UART_PORT_NUM,
+                                     (const char *)usb_to_uart_buffer, len);
+      if (written != len) {
+        ESP_LOGE(TAG, "UART write failed: %d of %d bytes", written, len);
+      }
+    }
+  }
+}
+
+static void uart_to_usb_task(void *arg) {
+  uart_event_t event;
+
+  while (true) {
+    if (xQueueReceive(uart_queue, &event, portMAX_DELAY) != pdTRUE) {
+      continue;
+    }
+
+    if (event.type == UART_DATA) {
+      size_t remaining = event.size;
+      while (remaining > 0) {
+        uint32_t chunk_size =
+            remaining > BUF_SIZE ? BUF_SIZE : (uint32_t)remaining;
+        int len = uart_read_bytes(UBRIDGE_UART_PORT_NUM, uart_to_usb_buffer,
+                                  chunk_size, 0);
+        if (len <= 0) {
+          ESP_LOGE(TAG, "UART RX buffer read failed: %d", len);
+          break;
+        }
+
+        int written = usb_serial_jtag_write_bytes(uart_to_usb_buffer, len,
+                                                  portMAX_DELAY);
+        if (written != len) {
+          ESP_LOGE(TAG, "USB write failed: %d of %d bytes", written, len);
+        }
+        usb_serial_jtag_ll_txfifo_flush();
+        remaining -= len;
+      }
+    } else if (event.type == UART_FIFO_OVF ||
+               event.type == UART_BUFFER_FULL) {
+      ESP_LOGE(TAG, "UART RX buffer overflow");
+      ESP_ERROR_CHECK(uart_flush_input(UBRIDGE_UART_PORT_NUM));
+      xQueueReset(uart_queue);
+    } else if (event.type == UART_PARITY_ERR || event.type == UART_FRAME_ERR) {
+      ESP_LOGW(TAG, "UART receive error: event=%d", event.type);
+    }
+  }
 }
 
 /* ----------------------------------------------------------- */
@@ -124,35 +187,22 @@ static void bridge_task(void *arg) {
   // gpio_set_direction(UBRIDGE_PIN_TXD, GPIO_MODE_INPUT);
   // gpio_set_direction(UBRIDGE_PIN_RXD, GPIO_MODE_INPUT);
 
-  ESP_ERROR_CHECK(uart_driver_install(UBRIDGE_UART_PORT_NUM, BUF_SIZE * 2, 0, 0,
-                                      NULL, intr_alloc_flags));
+  ESP_ERROR_CHECK(uart_driver_install(UBRIDGE_UART_PORT_NUM, BUF_SIZE * 2, 0,
+                                      20, &uart_queue, intr_alloc_flags));
   ESP_ERROR_CHECK(uart_param_config(UBRIDGE_UART_PORT_NUM, &uart_config));
   ESP_ERROR_CHECK(uart_set_pin(UBRIDGE_UART_PORT_NUM, UBRIDGE_PIN_TXD,
                                UBRIDGE_PIN_RXD, UBRIDGE_PIN_RTS,
                                UBRIDGE_PIN_CTS));
 
-  /* Configure a bridge buffer for the incoming data */
-  uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
-
-  while (true) {
-
-    int len =
-        usb_serial_jtag_read_bytes(data, BUF_SIZE, 500 / portTICK_PERIOD_MS);
-    if (len > 0) {
-      uart_write_bytes(UBRIDGE_UART_PORT_NUM, (const char *)data, len);
-      uart_flush(UBRIDGE_UART_PORT_NUM);
-    }
-
-    len = uart_read_bytes(UBRIDGE_UART_PORT_NUM, data, (BUF_SIZE),
-                          500 / portTICK_PERIOD_MS);
-    if (len > 0) {
-      usb_serial_jtag_write_bytes(data, len, 500 / portTICK_PERIOD_MS);
-      usb_serial_jtag_ll_txfifo_flush();
-    }
+  if (xTaskCreate(usb_to_uart_task, "usb_to_uart", UBRIDGE_TASK_STACK_SIZE,
+                  NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS ||
+      xTaskCreate(uart_to_usb_task, "uart_to_usb", UBRIDGE_TASK_STACK_SIZE,
+                  NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS) {
+    ESP_LOGE(TAG, "Failed to create bridge tasks");
+    abort();
   }
 
-  /* Never reached */
-  ESP_ERROR_CHECK(uart_driver_delete(UBRIDGE_UART_PORT_NUM));
+  vTaskDelete(NULL);
 }
 
 /* ----------------------------------------------------------- */
