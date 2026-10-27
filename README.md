@@ -66,8 +66,7 @@ See connection diagram below:
 
 ## How to Compile the Project
 
-[ESP-IDF](https://github.com/espressif/esp-idf) v5.0.1 or newer can be used to compile the project. Please read the
-documentation of ESP-IDF for setting up the environment.
+The project is built and tested with [ESP-IDF](https://github.com/espressif/esp-idf) v6.1. Please read the ESP-IDF documentation for setting up the environment.
 
 - `idf.py menuconfig` can be used to change the default configuration. The project-specific settings are in the "ESP32 Uart Bridge Configuration" sub-menu.
 - `idf.py build` will build the project binaries.
