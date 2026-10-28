@@ -185,6 +185,54 @@ class ReleaseWorkflowGatingTests(unittest.TestCase):
             "both assets into one folder",
         )
 
+    def test_merge_bin_output_is_relative_to_build_directory(self):
+        """idf.py merge-bin must write its output relative to its own cwd.
+
+        espressif/esp-idf-ci-action runs 'idf.py merge-bin' with its
+        working directory already set to the project's 'build' folder, so
+        passing '--output build/merged-firmware.bin' makes esptool look for
+        the nonexistent nested 'build/build/merged-firmware.bin' and raise
+        FileNotFoundError. The command argument must instead be
+        '--output merged-firmware.bin' (no 'build/' prefix), while the
+        later check/upload steps must keep referring to the
+        repository-relative 'build/merged-firmware.bin' path.
+        """
+        build_step = re.search(
+            r"Build and merge firmware.*?\n\s*command:\s*([^\n]+)",
+            self.verify_job,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(
+            build_step, "expected a 'Build and merge firmware' step with a 'command:' line"
+        )
+        command_text = build_step.group(1)
+
+        self.assertIn("merge-bin", command_text)
+        self.assertRegex(
+            command_text,
+            r"--output\s+merged-firmware\.bin(?:\s|$)",
+            "merge-bin command must use '--output merged-firmware.bin' "
+            "(relative to the build directory it runs in), not a "
+            "'build/'-prefixed path",
+        )
+        self.assertNotRegex(
+            command_text,
+            r"--output\s+build/merged-firmware\.bin",
+            "merge-bin command must not pass 'build/merged-firmware.bin' as "
+            "--output, since idf.py runs it from inside the build "
+            "directory already and that would resolve to the nonexistent "
+            "nested 'build/build/merged-firmware.bin'",
+        )
+
+        # The later check and upload steps must still use the
+        # repository-relative path 'build/merged-firmware.bin'.
+        self.assertIn("test -f build/merged-firmware.bin", self.verify_job)
+        self.assertRegex(
+            self.verify_job,
+            r"path:\s*build/merged-firmware\.bin",
+            "upload-artifact step must still reference 'build/merged-firmware.bin'",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
