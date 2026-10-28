@@ -35,6 +35,7 @@
 #include <stdlib.h>
 
 #include "app_config.h"
+#include "bridge_status_led.h"
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "driver/usb_serial_jtag.h"
@@ -46,6 +47,7 @@
 #include "hal/usb_serial_jtag_ll.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
+#include "telnet_bridge.h"
 #include "wifi_portal.h"
 
 #define UBRIDGE_PIN_TXD CONFIG_UBRIDGE_UART_TXD
@@ -104,6 +106,9 @@ static void usb_to_uart_task(void *arg) {
     if (len > 0) {
       int written = uart_write_bytes(UBRIDGE_UART_PORT_NUM,
                                      (const char *)usb_to_uart_buffer, len);
+      if (written > 0) {
+        bridge_status_led_activity();
+      }
       if (written != len) {
         ESP_LOGE(TAG, "UART write failed: %d of %d bytes", written, len);
       }
@@ -133,6 +138,7 @@ static void uart_to_usb_task(void *arg) {
           break;
         }
 
+        bridge_status_led_activity();
         int written = usb_serial_jtag_write_bytes(uart_to_usb_buffer, len,
                                                   portMAX_DELAY);
         if (written != len) {
@@ -213,14 +219,16 @@ static void bridge_task(void *arg) {
 
   /*Run SMT32 */
   dfu_mode();
+  ESP_ERROR_CHECK(bridge_status_led_start(!bridge_config.telnet_enabled));
 
-  /* Configure USB-CDC */
-  usb_serial_jtag_driver_config_t usb_serial_config = {
-      .tx_buffer_size = bridge_config.uart_buffer_size,
-      .rx_buffer_size = bridge_config.uart_buffer_size,
-  };
-
-  ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_serial_config));
+  if (!bridge_config.telnet_enabled) {
+    /* Configure USB-CDC */
+    usb_serial_jtag_driver_config_t usb_serial_config = {
+        .tx_buffer_size = bridge_config.uart_buffer_size,
+        .rx_buffer_size = bridge_config.uart_buffer_size,
+    };
+    ESP_ERROR_CHECK(usb_serial_jtag_driver_install(&usb_serial_config));
+  }
 
   /* Configure parameters of an UART driver,
    * communication pins and install the driver */
@@ -259,15 +267,25 @@ static void bridge_task(void *arg) {
   }
   ESP_ERROR_CHECK(uart_set_line_inverse(UBRIDGE_UART_PORT_NUM, inverse_mask));
 
-  if (xTaskCreate(usb_to_uart_task, "usb_to_uart", UBRIDGE_TASK_STACK_SIZE,
-                  NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS ||
-      xTaskCreate(uart_to_usb_task, "uart_to_usb", UBRIDGE_TASK_STACK_SIZE,
-                  NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS) {
-    ESP_LOGE(TAG, "Failed to create bridge tasks");
-    abort();
+  if (!bridge_config.telnet_enabled) {
+    if (xTaskCreate(usb_to_uart_task, "usb_to_uart", UBRIDGE_TASK_STACK_SIZE,
+                    NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS ||
+        xTaskCreate(uart_to_usb_task, "uart_to_usb", UBRIDGE_TASK_STACK_SIZE,
+                    NULL, 2 | portPRIVILEGE_BIT, NULL) != pdPASS) {
+      ESP_LOGE(TAG, "Failed to create USB bridge tasks");
+      abort();
+    }
   }
 
   ESP_ERROR_CHECK(wifi_portal_start(&bridge_config));
+  if (bridge_config.telnet_enabled) {
+    esp_err_t err =
+        telnet_bridge_start(&bridge_config, UBRIDGE_UART_PORT_NUM, uart_queue);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Telnet startup failed; USB bridge remains disabled: %s",
+               esp_err_to_name(err));
+    }
+  }
   vTaskDelete(NULL);
 }
 

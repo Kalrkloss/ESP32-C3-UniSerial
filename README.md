@@ -15,11 +15,22 @@ Data is transferred in both directions between the computer and the target MCU.
 - With no saved Wi-Fi network, the device starts an open setup network named `UniSerial-xxxxxx`; open `http://192.168.4.1` for the captive configuration page.
 - The page scans for Wi-Fi networks, saves the selected network, and configures the setup AP channel. In station mode, the router controls the channel. If the saved network cannot be reached, the device falls back to the setup AP.
 - UART baud rate, buffer size, data bits, parity, stop bits, and RX/TX signal inversion are stored in NVS and applied after restart.
+- The optional Telnet UART bridge is disabled by default. When enabled, it replaces USB Serial/JTAG data forwarding; USB remains available for flashing and system messages.
 - The ESP32-C3 USB Serial/JTAG hardware ignores the host's CDC line-coding baud value; the host terminal cannot change the UART baud rate.
 
 After a successful Wi-Fi connection, the same page is available at the device's DHCP address; find it in the router's client list. The 4 MB flash layout uses one large application and NVS; OTA updates are not enabled.
 
-**Security:** The configuration page is unauthenticated HTTP on both the setup AP and the connected Wi-Fi network. The setup AP is open, and Wi-Fi credentials are transmitted over unencrypted HTTP and stored in unencrypted NVS. Use only on a trusted network; this prototype is not suitable for untrusted environments.
+## Telnet UART bridge
+
+Enable Telnet from the configuration page; changes take effect after the device restarts. The default port is `23`. Configure any port from `1` to `65535`, except `80`, which is reserved for the configuration page. Connect to the device's setup-AP or Wi-Fi address with a Telnet client, for example:
+
+```shell
+telnet 192.168.4.1 23
+```
+
+Authentication is optional. Leave the password empty for no login; otherwise set both a username and password. A saved password is shown as `******`; submitting that unchanged mask preserves it, while clearing the field removes it and disables authentication. Only one Telnet client can connect at a time. UART output received without an authenticated client is discarded rather than replayed later.
+
+Telnet and configuration-page traffic are unencrypted, and credentials are stored in unencrypted NVS. The setup AP is open and the configuration page has no login. Use both services only on trusted local networks; neither is suitable for untrusted environments.
 
 > NOTE: Firmware tested on ESP32-C3. But it may work in other ESP32 family.
 

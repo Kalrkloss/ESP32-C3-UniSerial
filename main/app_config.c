@@ -17,6 +17,7 @@ void app_config_set_defaults(app_config_t *config) {
   config->uart_data_bits = 8;
   config->uart_stop_bits = 1;
   config->wifi_ap_channel = 1;
+  config->telnet_port = APP_TELNET_PORT_DEFAULT;
 #if CONFIG_UBRIDGE_UART_PARITY == 2
   config->uart_parity = APP_UART_PARITY_EVEN;
 #elif CONFIG_UBRIDGE_UART_PARITY == 3
@@ -32,6 +33,10 @@ bool app_config_is_valid(const app_config_t *config) {
           APP_WIFI_SSID_MAX ||
       strnlen(config->wifi_password, sizeof(config->wifi_password)) >
           APP_WIFI_PASSWORD_MAX ||
+      strnlen(config->telnet_username, sizeof(config->telnet_username)) >
+          APP_TELNET_USERNAME_MAX ||
+      strnlen(config->telnet_password, sizeof(config->telnet_password)) >
+          APP_TELNET_PASSWORD_MAX ||
       config->uart_baud_rate < APP_UART_BAUD_MIN ||
       config->uart_baud_rate > APP_UART_BAUD_MAX ||
       config->uart_buffer_size < APP_UART_BUFFER_MIN ||
@@ -41,13 +46,17 @@ bool app_config_is_valid(const app_config_t *config) {
       (config->uart_stop_bits != 1 && config->uart_stop_bits != 15 &&
        config->uart_stop_bits != 2) ||
       config->uart_parity > APP_UART_PARITY_ODD ||
-      config->wifi_ap_channel < 1 || config->wifi_ap_channel > 13) {
+      config->wifi_ap_channel < 1 || config->wifi_ap_channel > 13 ||
+      config->telnet_port == 0 || config->telnet_port == 80) {
     return false;
   }
 
   size_t password_len = strnlen(config->wifi_password,
                                 sizeof(config->wifi_password));
-  return password_len == 0 || password_len >= 8;
+  size_t telnet_password_len =
+      strnlen(config->telnet_password, sizeof(config->telnet_password));
+  return (password_len == 0 || password_len >= 8) &&
+         (telnet_password_len == 0 || config->telnet_username[0] != '\0');
 }
 
 static esp_err_t read_string(nvs_handle_t handle, const char *key,
@@ -92,11 +101,21 @@ esp_err_t app_config_load(app_config_t *config) {
   uint8_t rx_invert = 0;
   uint8_t tx_invert = 0;
   uint32_t buffer_size = config->uart_buffer_size;
+  uint8_t telnet_enabled = 0;
+  uint32_t telnet_port = config->telnet_port;
   err = read_string(handle, "ssid", config->wifi_ssid,
                     sizeof(config->wifi_ssid));
   if (err == ESP_OK) {
     err = read_string(handle, "wifi_pass", config->wifi_password,
                       sizeof(config->wifi_password));
+  }
+  if (err == ESP_OK) {
+    err = read_string(handle, "telnet_user", config->telnet_username,
+                      sizeof(config->telnet_username));
+  }
+  if (err == ESP_OK) {
+    err = read_string(handle, "telnet_pass", config->telnet_password,
+                      sizeof(config->telnet_password));
   }
   if (err == ESP_OK) {
     err = read_u32(handle, "baud", &config->uart_baud_rate);
@@ -122,13 +141,19 @@ esp_err_t app_config_load(app_config_t *config) {
   if (err == ESP_OK) {
     err = read_u8(handle, "ap_channel", &config->wifi_ap_channel);
   }
+  if (err == ESP_OK) {
+    err = read_u8(handle, "telnet_enabled", &telnet_enabled);
+  }
+  if (err == ESP_OK) {
+    err = read_u32(handle, "telnet_port", &telnet_port);
+  }
   nvs_close(handle);
   if (err != ESP_OK) {
     return err;
   }
 
-  if (buffer_size > UINT16_MAX) {
-    ESP_LOGW(TAG, "Stored UART buffer size is invalid; using defaults");
+  if (buffer_size > UINT16_MAX || telnet_port > UINT16_MAX) {
+    ESP_LOGW(TAG, "Stored configuration value is invalid; using defaults");
     app_config_set_defaults(config);
     return ESP_OK;
   }
@@ -136,6 +161,8 @@ esp_err_t app_config_load(app_config_t *config) {
   config->uart_rx_invert = rx_invert != 0;
   config->uart_tx_invert = tx_invert != 0;
   config->uart_buffer_size = (uint16_t)buffer_size;
+  config->telnet_enabled = telnet_enabled != 0;
+  config->telnet_port = (uint16_t)telnet_port;
   if (!app_config_is_valid(config)) {
     ESP_LOGW(TAG, "Stored settings are invalid; using defaults");
     app_config_set_defaults(config);
@@ -181,6 +208,18 @@ esp_err_t app_config_save(const app_config_t *config) {
   }
   if (err == ESP_OK) {
     err = nvs_set_u8(handle, "ap_channel", config->wifi_ap_channel);
+  }
+  if (err == ESP_OK) {
+    err = nvs_set_u8(handle, "telnet_enabled", config->telnet_enabled);
+  }
+  if (err == ESP_OK) {
+    err = nvs_set_u32(handle, "telnet_port", config->telnet_port);
+  }
+  if (err == ESP_OK) {
+    err = nvs_set_str(handle, "telnet_user", config->telnet_username);
+  }
+  if (err == ESP_OK) {
+    err = nvs_set_str(handle, "telnet_pass", config->telnet_password);
   }
   if (err == ESP_OK) {
     err = nvs_commit(handle);

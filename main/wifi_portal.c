@@ -306,6 +306,7 @@ static esp_err_t index_handler(httpd_req_t *req) {
            "body{font:16px system-ui;max-width:760px;margin:2rem auto;padding:0 1rem}"
            "fieldset{margin:1rem 0;padding:1rem;border:1px solid #bbb}"
            "label{display:block;margin:.7rem 0}.warning{color:#8a3400}"
+           "label input:not([type=checkbox]),label select{margin-left:.35rem}"
            "input,select,button{font:inherit;padding:.35rem}input[type=checkbox]{width:auto}"
            "</style></head><body><h1>ESP32-C3-UniSerial</h1>"
            "<p class=\"warning\"><b>Open setup network:</b> settings and Wi-Fi "
@@ -372,7 +373,46 @@ static esp_err_t index_handler(httpd_req_t *req) {
         req, "<p>Network scan failed; enter the SSID manually.</p>");
   }
   if (err == ESP_OK) {
-    err = httpd_resp_sendstr_chunk(req, "</fieldset><fieldset><legend>UART</legend>");
+    err = httpd_resp_sendstr_chunk(
+        req, "</fieldset><fieldset><legend>Telnet</legend>"
+             "<label><input type=\"checkbox\" name=\"telnet_enabled\" "
+             "value=\"1\"");
+  }
+  if (err == ESP_OK && s_config.telnet_enabled) {
+    err = httpd_resp_sendstr_chunk(req, " checked");
+  }
+  if (err == ESP_OK) {
+    err = httpd_resp_sendstr_chunk(
+        req, "> Enable Telnet UART bridge</label>"
+             "<label>Port (1-65535; 80 is reserved)<input type=\"number\" "
+             "name=\"telnet_port\" min=\"1\" max=\"65535\" value=\"");
+  }
+  if (err == ESP_OK) {
+    err = send_format(req, "%u", s_config.telnet_port);
+  }
+  if (err == ESP_OK) {
+    err = httpd_resp_sendstr_chunk(
+        req, "\"></label><label>Telnet username<input type=\"text\" "
+             "name=\"telnet_username\" maxlength=\"32\" value=\"");
+  }
+  if (err == ESP_OK) {
+    err = send_html_escaped(req, s_config.telnet_username);
+  }
+  if (err == ESP_OK) {
+    err = httpd_resp_sendstr_chunk(
+        req, "\"></label><label>Telnet password<input type=\"password\" "
+             "name=\"telnet_password\" maxlength=\"64\" "
+             "autocomplete=\"new-password\" value=\"");
+  }
+  if (err == ESP_OK && s_config.telnet_password[0] != '\0') {
+    err = httpd_resp_sendstr_chunk(req, "******");
+  }
+  if (err == ESP_OK) {
+    err = httpd_resp_sendstr_chunk(
+        req, "\"></label><p>Leave the password empty to disable Telnet "
+             "authentication. An unchanged ****** mask keeps the saved "
+             "password.</p><p class=\"warning\">Port 80 is reserved for the "
+             "configuration page.</p></fieldset><fieldset><legend>UART</legend>");
   }
   if (err != ESP_OK) {
     return err;
@@ -625,6 +665,30 @@ static esp_err_t save_handler(httpd_req_t *req) {
       get_form_value(body, "tx_invert", value, sizeof(value)) &&
       strcmp(value, "1") == 0;
 
+  next_config.telnet_enabled =
+      get_form_value(body, "telnet_enabled", value, sizeof(value)) &&
+      strcmp(value, "1") == 0;
+  if (!get_form_value(body, "telnet_port", value, sizeof(value)) ||
+      !parse_uint_value(value, 1, UINT16_MAX, &number)) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                               "Invalid Telnet port");
+  }
+  next_config.telnet_port = (uint16_t)number;
+
+  if (!get_form_value(body, "telnet_username", next_config.telnet_username,
+                      sizeof(next_config.telnet_username)) ||
+      !get_form_value(body, "telnet_password", value,
+                      APP_TELNET_PASSWORD_MAX + 1)) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                               "Invalid Telnet credentials");
+  }
+  if (value[0] == '\0') {
+    next_config.telnet_password[0] = '\0';
+  } else if (strcmp(value, "******") != 0 ||
+             next_config.telnet_password[0] == '\0') {
+    memcpy(next_config.telnet_password, value, strlen(value) + 1);
+  }
+
   if (!app_config_is_valid(&next_config)) {
     return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
                                "Settings are outside supported limits");
@@ -640,8 +704,12 @@ static esp_err_t save_handler(httpd_req_t *req) {
 
   httpd_resp_set_type(req, "text/html; charset=utf-8");
   err = httpd_resp_sendstr(
-      req, "<!doctype html><html><body><h1>Settings saved</h1>"
+      req, "<!doctype html><html><head>"
+           "<meta http-equiv=\"refresh\" content=\"8;url=/\"></head><body>"
+           "<h1>Settings saved</h1>"
            "<p>The device is restarting. Reconnect in a few seconds.</p>"
+           "<p>If you are not redirected automatically, "
+           "<a href=\"/\">return to the configuration page</a>.</p>"
            "</body></html>");
   if (err == ESP_OK) {
     vTaskDelay(pdMS_TO_TICKS(500));

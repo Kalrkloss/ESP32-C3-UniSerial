@@ -7,6 +7,9 @@
 
 #define APP_WIFI_SSID_MAX 32
 #define APP_WIFI_PASSWORD_MAX 64
+#define APP_TELNET_USERNAME_MAX 32
+#define APP_TELNET_PASSWORD_MAX 64
+#define APP_TELNET_PORT_DEFAULT 23
 #define APP_UART_BUFFER_MIN 64
 #define APP_UART_BUFFER_MAX 2048
 #define APP_UART_BAUD_MIN 1200
@@ -29,6 +32,10 @@ typedef struct {
   bool uart_rx_invert;
   bool uart_tx_invert;
   uint8_t wifi_ap_channel;
+  bool telnet_enabled;
+  uint16_t telnet_port;
+  char telnet_username[APP_TELNET_USERNAME_MAX + 1];
+  char telnet_password[APP_TELNET_PASSWORD_MAX + 1];
 } app_config_t;
 
 void app_config_set_defaults(app_config_t *config);
