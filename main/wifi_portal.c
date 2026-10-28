@@ -357,6 +357,17 @@ static esp_err_t index_handler(httpd_req_t *req) {
         req, "\"></label><label>Wi-Fi password<input type=\"password\" "
              "name=\"wifi_password\" maxlength=\"64\" "
              "autocomplete=\"new-password\"></label>"
+             "<p>Leave this field empty to keep the saved password.</p>"
+             "<label><input type=\"checkbox\" name=\"wifi_password_clear\" "
+             "value=\"1\"> Clear saved Wi-Fi password (open network)</label>");
+  }
+  if (err == ESP_OK && s_config.wifi_password[0] != '\0') {
+    err = httpd_resp_sendstr_chunk(
+        req, "<p>Saved Wi-Fi password: ******</p>");
+  }
+  if (err == ESP_OK) {
+    err = httpd_resp_sendstr_chunk(
+        req,
              "<label>Setup AP channel (1-13)<input type=\"number\" "
              "name=\"ap_channel\" min=\"1\" max=\"13\" value=\"");
   }
@@ -607,16 +618,25 @@ static esp_err_t save_handler(httpd_req_t *req) {
   body[received] = '\0';
 
   app_config_t next_config = s_config;
+  char wifi_password[APP_WIFI_PASSWORD_MAX + 1];
   char value[APP_WIFI_PASSWORD_MAX + 1];
   uint32_t number;
+  bool clear_wifi_password =
+      get_form_value(body, "wifi_password_clear", value, sizeof(value)) &&
+      strcmp(value, "1") == 0;
   if (!get_form_value(body, "ssid", next_config.wifi_ssid,
                       sizeof(next_config.wifi_ssid)) ||
-      !get_form_value(body, "wifi_password", next_config.wifi_password,
-                      sizeof(next_config.wifi_password)) ||
+      !get_form_value(body, "wifi_password", wifi_password,
+                      APP_WIFI_PASSWORD_MAX + 1) ||
       !get_form_value(body, "baud", value, sizeof(value)) ||
       !parse_uint_value(value, APP_UART_BAUD_MIN, APP_UART_BAUD_MAX, &number)) {
     return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
                                "Invalid or missing Wi-Fi/baud settings");
+  }
+  if (clear_wifi_password) {
+    next_config.wifi_password[0] = '\0';
+  } else if (wifi_password[0] != '\0') {
+    memcpy(next_config.wifi_password, wifi_password, strlen(wifi_password) + 1);
   }
   next_config.uart_baud_rate = number;
 

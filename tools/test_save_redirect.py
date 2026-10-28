@@ -82,5 +82,34 @@ class PortalSpacingTests(unittest.TestCase):
         )
 
 
+class WifiPasswordPreservationTests(unittest.TestCase):
+    def test_portal_has_explicit_clear_wifi_password_control(self):
+        source = SOURCE.read_text(encoding="utf-8")
+        self.assertIn("wifi_password_clear", source)
+        self.assertIn("Clear saved Wi-Fi password (open network)", source)
+
+    def test_save_handler_does_not_overwrite_wifi_password_from_blank_field(self):
+        source = SOURCE.read_text(encoding="utf-8")
+        handler = re.search(
+            r"static esp_err_t save_handler\(.*?\n}\n\nstatic esp_err_t redirect_to_portal",
+            source,
+            re.DOTALL,
+        )
+        if handler is None:
+            raise AssertionError("save_handler was not found")
+        body = handler.group(0)
+        self.assertNotIn(
+            'get_form_value(body, "wifi_password", next_config.wifi_password,',
+            body,
+        )
+        self.assertRegex(
+            body,
+            r'get_form_value\(body,\s*"wifi_password",\s*wifi_password,\s*'
+            r'APP_WIFI_PASSWORD_MAX \+ 1\)',
+        )
+        self.assertRegex(body, r'wifi_password_clear')
+        self.assertRegex(body, r'wifi_password\[0\] != \'\\0\'')
+
+
 if __name__ == "__main__":
     unittest.main()
