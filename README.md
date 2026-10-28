@@ -10,6 +10,8 @@ This is an independent, substantial redesign of the original project. It is main
 ESP32-C3-UniSerial is an ESP-IDF project that bridges USB Serial/JTAG and a hardware UART. The current firmware uses independent transfer tasks to reduce bridge latency.
 Data is transferred in both directions between the computer and the target MCU.
 
+📖 Documentation and a browser-based firmware installer are available on the project site: **https://kalrkloss.github.io/ESP32-C3-UniSerial/**
+
 ## Current configuration features
 
 - With no saved Wi-Fi network, the device starts an open setup network named `UniSerial-xxxxxx`; open `http://192.168.4.1` for the captive configuration page.

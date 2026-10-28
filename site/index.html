@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESP32-C3-UniSerial — Documentation &amp; Web Installer</title>
+<meta name="description" content="Documentation and browser-based firmware installer for ESP32-C3-UniSerial, a USB Serial/JTAG to UART bridge with Wi-Fi configuration and optional Telnet.">
+<link rel="stylesheet" href="styles.css">
+<script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <h1>ESP32-C3-UniSerial</h1>
+    <p class="subtitle">USB Serial/JTAG ⇄ UART bridge for ESP32-C3, with a Wi-Fi configuration portal and an optional Telnet bridge.</p>
+    <nav class="toc" aria-label="Section navigation">
+      <ul>
+        <li><a href="#hardware">Supported hardware</a></li>
+        <li><a href="#setup">First-time setup</a></li>
+        <li><a href="#configuration">UART &amp; Wi-Fi configuration</a></li>
+        <li><a href="#transport">USB / Telnet modes</a></li>
+        <li><a href="#led">Status LED</a></li>
+        <li><a href="#security">Security notes</a></li>
+        <li><a href="#recovery">Troubleshooting &amp; recovery</a></li>
+        <li><a href="#install">Install firmware</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section id="hardware">
+    <h2>Supported hardware and wiring</h2>
+    <p>
+      This firmware targets the <strong>ESP32-C3</strong> only; other ESP32
+      family chips are not supported by this release. The board bridges USB
+      Serial/JTAG on one side and a hardware UART on the other, so a target
+      MCU with 3.3&nbsp;V logic UART pins can be programmed and monitored
+      over the same USB cable used to flash the ESP32-C3.
+    </p>
+    <table>
+      <thead>
+        <tr><th>ESP32-C3 signal</th><th>ESP32-C3 pin</th><th>Target MCU UART pin</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>UART Transmit (TxD)</td><td>GPIO21</td><td>RxD</td></tr>
+        <tr><td>UART Receive (RxD)</td><td>GPIO20</td><td>TxD</td></tr>
+        <tr><td>Ground</td><td>GND</td><td>GND</td></tr>
+      </tbody>
+    </table>
+    <p>Connect only 3.3&nbsp;V logic-level UART signals; do not connect RS-232 or 5&nbsp;V logic directly.</p>
+  </section>
+
+  <section id="setup">
+    <h2>First-time setup</h2>
+    <ol>
+      <li>Flash the firmware using the <a href="#install">web installer</a> below, or with <code>idf.py flash</code> from source.</li>
+      <li>On first boot (or whenever no Wi-Fi network is saved), the device starts an open setup access point named <code>UniSerial-xxxxxx</code>.</li>
+      <li>Connect a computer or phone to that access point and open <code>http://192.168.4.1</code> in a browser to reach the configuration page.</li>
+      <li>Select and save a Wi-Fi network. After a successful connection, the same configuration page is reachable at the device's DHCP address on your router's network; find it in the router's client list.</li>
+      <li>If the saved network cannot be reached, the device automatically falls back to the open setup access point so it is never left unreachable.</li>
+    </ol>
+  </section>
+
+  <section id="configuration">
+    <h2>UART and Wi-Fi configuration</h2>
+    <p>
+      All configuration is done through the web portal; there is no serial
+      configuration protocol. The following UART parameters are stored in
+      NVS and applied after the device restarts:
+    </p>
+    <ul>
+      <li>Baud rate</li>
+      <li>Data bits, parity, and stop bits</li>
+      <li>Buffer size</li>
+      <li>RX/TX signal inversion</li>
+    </ul>
+    <div class="callout">
+      <p>
+        <strong>Wi-Fi password field behavior:</strong> leaving the password
+        field blank when saving preserves the currently stored Wi-Fi
+        password. To remove a saved password (for example to configure an
+        open network), use the explicit "clear password" checkbox on the
+        configuration page; only that explicit action clears the stored
+        credential.
+      </p>
+    </div>
+    <p>
+      The ESP32-C3 USB Serial/JTAG hardware ignores the host's USB CDC
+      line-coding baud value, so a host terminal cannot change the UART baud
+      rate; the baud rate must be set from the web configuration page.
+    </p>
+  </section>
+
+  <section id="transport">
+    <h2>USB and Telnet transport modes</h2>
+    <p>
+      USB Serial/JTAG and the optional Telnet UART bridge are
+      <strong>mutually exclusive</strong> for UART data forwarding:
+    </p>
+    <ul>
+      <li>By default, the Telnet bridge is disabled and all UART traffic is forwarded over USB Serial/JTAG to the host computer.</li>
+      <li>When Telnet is enabled from the configuration page, it replaces USB Serial/JTAG for UART data forwarding. USB remains available for flashing and system messages, but UART data is no longer bridged over USB while Telnet is active.</li>
+      <li>Only one Telnet client can connect at a time; UART output received without an authenticated Telnet client connected is discarded rather than replayed later.</li>
+    </ul>
+    <p>Enable or disable Telnet, and set its port (any value from 1 to 65535 except 80, which is reserved for the configuration page), from the web configuration page. Changes take effect after the device restarts.</p>
+  </section>
+
+  <section id="led">
+    <h2>Status LED (connection and activity)</h2>
+    <p>
+      The onboard status LED on <strong>GPIO8</strong> indicates connection
+      and data-activity state: it reflects whether a client (USB host or
+      Telnet) is connected, and blinks on UART traffic.
+    </p>
+    <div class="callout warning">
+      <p>
+        <strong>Hardware limitation:</strong> on this board, GPIO8 is also
+        wired as the external-target <strong>BOOT0</strong> control line.
+        The status LED and external-target BOOT0 control cannot operate at
+        the same time: while the status LED is active, GPIO8 must not be
+        used to drive an external target's boot mode, and vice versa. Do not
+        rely on GPIO8 for BOOT0 control if you need the status LED, and do
+        not expect LED activity while GPIO8 is being used for BOOT0 control.
+      </p>
+    </div>
+  </section>
+
+  <section id="security">
+    <h2>Security notes</h2>
+    <ul>
+      <li><strong>Unencrypted traffic:</strong> the Telnet UART bridge and the device's own configuration page are served without encryption. Credentials saved for Telnet are stored in unencrypted NVS on the device.</li>
+      <li><strong>Open setup network:</strong> the initial setup access point is open (no Wi-Fi password) and the configuration page itself has no login.</li>
+      <li>Use the Telnet bridge and the configuration page only on trusted local networks. Neither is suitable for exposure to untrusted networks or the public internet.</li>
+      <li>Telnet authentication is optional: leave the Telnet password empty for no login, or set both a username and password to require one.</li>
+    </ul>
+  </section>
+
+  <section id="recovery">
+    <h2>Troubleshooting and recovery</h2>
+    <ul>
+      <li>If the saved Wi-Fi network is unreachable, the device automatically falls back to the open <code>UniSerial-xxxxxx</code> setup access point at <code>http://192.168.4.1</code>.</li>
+      <li>If the configuration page is unreachable after a Wi-Fi change, check your router's client list for the device's new DHCP address, or reconnect to the setup access point.</li>
+    </ul>
+    <div class="callout danger">
+      <p>
+        <strong>Erasing warning:</strong> using the installer's "Erase
+        device" option (or any full-chip erase) removes all saved Wi-Fi and
+        UART configuration settings stored in NVS, in addition to the
+        firmware itself. Only erase the device if you intend to reset it to
+        an unconfigured state; a normal firmware update does not require
+        erasing and preserves your saved settings.
+      </p>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install firmware from your browser</h2>
+    <div class="callout">
+      <p>
+        <strong>Requirements:</strong> this installer uses the
+        <a href="https://developer.chrome.com/docs/capabilities/serial" target="_blank" rel="noopener">Web Serial API</a>,
+        which requires a Chromium-based browser (Chrome or Edge) served over
+        <strong>HTTPS</strong> (or <code>localhost</code>) and a direct USB
+        connection to the ESP32-C3. Web Serial is not available in Firefox
+        or Safari, and it is not available over a plain HTTP connection.
+      </p>
+    </div>
+    <div class="install-panel">
+      <p>Connect the ESP32-C3 over USB, then click Connect and choose the matching serial port.</p>
+      <esp-web-install-button manifest="firmware/manifest.json">
+        <button slot="activate">Connect and install firmware</button>
+        <span slot="unsupported">Your browser does not support the Web Serial API. Use Chrome or Edge over HTTPS.</span>
+        <span slot="not-allowed">Web Serial access is not permitted on this page. Reload over HTTPS and try again.</span>
+      </esp-web-install-button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>ESP32-C3-UniSerial — see the project <a href="../README.md">README</a> for build-from-source instructions.</p>
+</footer>
+
+</body>
+</html>
