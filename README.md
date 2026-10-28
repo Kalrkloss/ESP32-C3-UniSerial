@@ -10,6 +10,17 @@ This is an independent, substantial redesign of the original project. It is main
 ESP32-C3-UniSerial is an ESP-IDF project that bridges USB Serial/JTAG and a hardware UART. The current firmware uses independent transfer tasks to reduce bridge latency.
 Data is transferred in both directions between the computer and the target MCU.
 
+## Current configuration features
+
+- With no saved Wi-Fi network, the device starts an open setup network named `UniSerial-xxxxxx`; open `http://192.168.4.1` for the captive configuration page.
+- The page scans for Wi-Fi networks, saves the selected network, and configures the setup AP channel. In station mode, the router controls the channel. If the saved network cannot be reached, the device falls back to the setup AP.
+- UART baud rate, buffer size, data bits, parity, stop bits, and RX/TX signal inversion are stored in NVS and applied after restart.
+- The ESP32-C3 USB Serial/JTAG hardware ignores the host's CDC line-coding baud value; the host terminal cannot change the UART baud rate.
+
+After a successful Wi-Fi connection, the same page is available at the device's DHCP address; find it in the router's client list. The 4 MB flash layout uses one large application and NVS; OTA updates are not enabled.
+
+**Security:** The configuration page is unauthenticated HTTP on both the setup AP and the connected Wi-Fi network. The setup AP is open, and Wi-Fi credentials are transmitted over unencrypted HTTP and stored in unencrypted NVS. Use only on a trusted network; this prototype is not suitable for untrusted environments.
+
 > NOTE: Firmware tested on ESP32-C3. But it may work in other ESP32 family.
 
 See diagram below:
@@ -96,7 +107,7 @@ idf.py menuconfig
 ```
 
 > NOTE: This repository defaults to `115200` baud and UART port `1` on the ESP32-C3.
-> The ESP32-C3 USB Serial/JTAG controller ignores the host's CDC line-coding baud value, so changing the terminal's baud rate does not change the UART baud rate. Configure the UART rate in `sdkconfig.defaults` or with `idf.py menuconfig`.
+> Runtime UART settings are saved in NVS by the web UI and applied after restart. The ESP32-C3 USB Serial/JTAG controller ignores the host's CDC line-coding baud value.
 >
 > WARNING: The parity setting by default selected `none`. If you are going to flash STM32 using the ST serial bootloader you MUST select `even` parity. 
 
@@ -109,4 +120,3 @@ idf.py set-target esp32c3
 idf.py build
 idf.py -p PORT flash
 ```
-
