@@ -1,0 +1,143 @@
+name: Release firmware and publish GitHub Pages
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (tests + firmware build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Verify tag is reachable from origin/main
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+            echo "::error::Tag ${{ github.ref_name }} is not an ancestor of origin/main"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run hardware-independent test suite
+        run: |
+          python tools/test_save_redirect.py
+          python tools/test_status_led.py
+          python tools/test_site.py
+          python tools/test_prepare_pages.py
+          python tools/test_release_workflow.py
+
+      - name: Build and merge firmware (esp32c3, ESP-IDF v6.1)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.1
+          target: esp32c3
+          command: idf.py build && idf.py merge-bin --format raw --output merged-firmware.bin
+
+      - name: Confirm merged firmware image was produced
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          test -f build/merged-firmware.bin || { echo "::error::build/merged-firmware.bin is missing"; exit 1; }
+
+      - name: Upload merged firmware artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-firmware
+          path: build/merged-firmware.bin
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub release and Pages artifact
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Download merged firmware artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: merged-firmware
+          path: firmware-dist
+
+      - name: Generate checksum
+        run: |
+          cd firmware-dist
+          sha256sum merged-firmware.bin > SHA256SUMS
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF_NAME" = "v0.1.0" ]; then
+            gh release create "$GITHUB_REF_NAME" \
+              firmware-dist/merged-firmware.bin \
+              firmware-dist/SHA256SUMS \
+              --prerelease \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              firmware-dist/merged-firmware.bin \
+              firmware-dist/SHA256SUMS \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Package GitHub Pages site
+        run: |
+          python tools/prepare_pages.py \
+            --site-dir site \
+            --firmware-bin firmware-dist/merged-firmware.bin \
+            --output-dir _site \
+            --version "$GITHUB_REF_NAME"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -14,7 +14,7 @@ menu "ESP32 Uart Bridge Configuration"
 
     config UBRIDGE_UART_BAUD_RATE
         int "UART communication speed"
-        range 1200 115200
+        range 1200 3000000
         default 115200
         help
             UART communication speed.

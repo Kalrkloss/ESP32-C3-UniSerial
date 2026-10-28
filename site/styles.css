@@ -1,0 +1,180 @@
+:root {
+  color-scheme: light dark;
+  --max-width: 52rem;
+  --accent: #2563eb;
+  --border: #d0d7de;
+  --warn-bg: #fff4e5;
+  --warn-border: #e8a33d;
+  --danger-bg: #fdecea;
+  --danger-border: #d14343;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.55;
+  color: #1b1f23;
+  background: #ffffff;
+}
+
+header.site-header {
+  padding: 2rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.9rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #57606a;
+}
+
+nav.toc {
+  margin-top: 1.25rem;
+}
+
+nav.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+nav.toc a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+nav.toc a:hover {
+  text-decoration: underline;
+}
+
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+section {
+  margin: 2.5rem 0;
+  scroll-margin-top: 1rem;
+}
+
+section h2 {
+  font-size: 1.4rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: #f6f8fa;
+  border-radius: 6px;
+}
+
+code {
+  padding: 0.1rem 0.35rem;
+}
+
+pre {
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.callout {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  margin: 1rem 0;
+}
+
+.callout.warning {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+
+.callout.danger {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+.install-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  background: #f6f8fa;
+}
+
+.install-panel esp-web-install-button {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+footer {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  color: #57606a;
+  font-size: 0.9rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.55rem;
+  }
+
+  nav.toc ul {
+    gap: 0.4rem 0.75rem;
+  }
+
+  section h2 {
+    font-size: 1.2rem;
+  }
+
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+
+  th {
+    border-bottom: none;
+  }
+
+  td {
+    border-top: none;
+  }
+
+  tr {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+  }
+}

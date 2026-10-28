@@ -10,6 +10,30 @@ This is an independent, substantial redesign of the original project. It is main
 ESP32-C3-UniSerial is an ESP-IDF project that bridges USB Serial/JTAG and a hardware UART. The current firmware uses independent transfer tasks to reduce bridge latency.
 Data is transferred in both directions between the computer and the target MCU.
 
+📖 Documentation and a browser-based firmware installer are available on the project site: **https://kalrkloss.github.io/ESP32-C3-UniSerial/**
+
+## Current configuration features
+
+- With no saved Wi-Fi network, the device starts an open setup network named `UniSerial-xxxxxx`; open `http://192.168.4.1` for the captive configuration page.
+- The page scans for Wi-Fi networks, saves the selected network, and configures the setup AP channel. In station mode, the router controls the channel. If the saved network cannot be reached, the device falls back to the setup AP.
+- UART baud rate, buffer size, data bits, parity, stop bits, and RX/TX signal inversion are stored in NVS and applied after restart.
+- The optional Telnet UART bridge is disabled by default. When enabled, it replaces USB Serial/JTAG data forwarding; USB remains available for flashing only. This release disables the secondary USB console and reassigns the UART0 pins, so firmware log output is not exposed over USB, whether or not Telnet is active.
+- The ESP32-C3 USB Serial/JTAG hardware ignores the host's CDC line-coding baud value; the host terminal cannot change the UART baud rate.
+
+After a successful Wi-Fi connection, the same page is available at the device's DHCP address; find it in the router's client list. The 4 MB flash layout uses one large application and NVS; OTA updates are not enabled.
+
+## Telnet UART bridge
+
+Enable Telnet from the configuration page; changes take effect after the device restarts. The default port is `23`. Configure any port from `1` to `65535`, except `80`, which is reserved for the configuration page. Connect to the device's setup-AP or Wi-Fi address with a Telnet client, for example:
+
+```shell
+telnet 192.168.4.1 23
+```
+
+Authentication is optional. Leave the password empty for no login; otherwise set both a username and password. A saved password is shown as `******`; submitting that unchanged mask preserves it, while clearing the field removes it and disables authentication. Only one Telnet client can connect at a time. UART output received without an authenticated client is discarded rather than replayed later.
+
+Telnet and configuration-page traffic are unencrypted, and credentials are stored in unencrypted NVS. The setup AP is open and the configuration page has no login. Use both services only on trusted local networks; neither is suitable for untrusted environments.
+
 > NOTE: Firmware tested on ESP32-C3. But it may work in other ESP32 family.
 
 See diagram below:
@@ -62,12 +86,27 @@ See connection diagram below:
 └────────┘       └────────┘
 ```
 
+### RX burst regression test
+
+For a loopback test, connect ESP32-C3 GPIO21 (UART TX) to GPIO20 (UART RX), then run:
+
+```shell
+python -m pip install pyserial
+python tools/test_usb_serial_jtag_burst.py COM13 --baud 115200 --bytes 65536
+```
+
+Replace `COM13` with the board's USB Serial/JTAG port and set `--baud` to the UART baud configured on the device. The test disables DTR/RTS, removes startup output with a short loopback preflight, and verifies byte count, order, and SHA-256. Use `--bytes 65537` to include a final partial USB packet.
+
+### Status LED hardware limitation
+
+The SuperMini status LED intentionally uses GPIO8. On this hardware, GPIO8 is also wired as the external-target BOOT0 control. While status LED activity is enabled, GPIO8 must not be used for external target boot control.
 
 
 ## How to Compile the Project
 
-[ESP-IDF](https://github.com/espressif/esp-idf) v5.0.1 or newer can be used to compile the project. Please read the
-documentation of ESP-IDF for setting up the environment.
+The project is built and tested with [ESP-IDF](https://github.com/espressif/esp-idf) v6.1. Please read the ESP-IDF documentation for setting up the environment.
+
+The USB Serial/JTAG driver is tracked as a submodule at `components/esp_driver_usb_serial_jtag` from [Kalrkloss/esp32-usb-serial-jtag-rxfix](https://github.com/Kalrkloss/esp32-usb-serial-jtag-rxfix), pinned to `58639fe0d87cdb4c080a7a7b0f25f7e5323cbaa7`. Initialize it after cloning with `git submodule update --init --recursive`.
 
 - `idf.py menuconfig` can be used to change the default configuration. The project-specific settings are in the "ESP32 Uart Bridge Configuration" sub-menu.
 - `idf.py build` will build the project binaries.
@@ -85,7 +124,7 @@ idf.py menuconfig
 ```
 
 > NOTE: This repository defaults to `115200` baud and UART port `1` on the ESP32-C3.
-> The ESP32-C3 USB Serial/JTAG controller ignores the host's CDC line-coding baud value, so changing the terminal's baud rate does not change the UART baud rate. Configure the UART rate in `sdkconfig.defaults` or with `idf.py menuconfig`.
+> Runtime UART settings are saved in NVS by the web UI and applied after restart. The ESP32-C3 USB Serial/JTAG controller ignores the host's CDC line-coding baud value.
 >
 > WARNING: The parity setting by default selected `none`. If you are going to flash STM32 using the ST serial bootloader you MUST select `even` parity. 
 
@@ -98,4 +137,3 @@ idf.py set-target esp32c3
 idf.py build
 idf.py -p PORT flash
 ```
-
