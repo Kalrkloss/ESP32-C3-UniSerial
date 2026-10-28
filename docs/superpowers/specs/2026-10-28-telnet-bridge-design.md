@@ -13,8 +13,10 @@ system messages.
 - Add a persistent Telnet enable setting to the existing web configuration
   page. Configuration changes take effect after the existing save-and-restart
   flow.
-- Telnet listens on TCP port 23 and is reachable on the active setup AP or
-  connected Wi-Fi interface.
+- Telnet is reachable on the active setup AP or connected Wi-Fi interface.
+  Its TCP port is configurable on the web page and defaults to 23.
+- Accept ports 1–65535 except 80, which is reserved for the configuration
+  site's HTTP server.
 - Permit one Telnet client at a time. Reject additional clients while one is
   connected; accept new connections after disconnect.
 - Bridge bytes in both directions between the connected Telnet client and the
@@ -54,9 +56,11 @@ system messages.
 
 ### Configuration and startup
 
-Extend `app_config_t` and NVS persistence with a Telnet enable flag, login
-name, and password. Add matching controls to the existing configuration page.
-Validate lengths and reject a non-empty password with an empty login name.
+Extend `app_config_t` and NVS persistence with a Telnet enable flag, TCP port,
+login name, and password. Default the port to 23 and add matching controls to
+the existing configuration page. Validate the port as 1–65535, rejecting 80
+because it is used by the configuration site's HTTP server. Validate
+credential lengths and reject a non-empty password with an empty login name.
 Treat an empty password as authentication disabled, even if an inactive login
 name remains stored.
 
@@ -71,10 +75,12 @@ path disabled; it must not change the selected mode implicitly.
 ### Telnet session and byte flow
 
 Use the existing ESP-IDF/lwIP socket APIs; do not add a third-party component.
-The listener owns the listening socket and accepts one client. A connected
-session has one receive path that writes client payload to UART and one UART
-receive path that writes bytes to the socket. Handle short reads/writes and
-disconnects explicitly. Close a failed client and return to accept state.
+The listener uses the configured TCP port (default 23), owns the listening
+socket, and accepts one client. Reject port 0 and port 80; accept other valid
+TCP port numbers from 1 through 65535. A connected session has one receive
+path that writes client payload to UART and one UART receive path that writes
+bytes to the socket. Handle short reads/writes and disconnects explicitly.
+Close a failed client and return to accept state.
 
 Implement minimal Telnet IAC handling: negotiate unsupported options off,
 consume Telnet control sequences instead of forwarding them to UART, and
@@ -107,21 +113,23 @@ The page must communicate these semantics next to the password field.
 ## Validation and acceptance
 
 1. Build with the project's ESP-IDF v6.1 environment.
-2. With Telnet disabled, verify the existing USB Serial/JTAG loopback and
+2. Verify the default Telnet port is 23, a custom valid port is used after
+   restart, and ports 0 and 80 are rejected by configuration validation.
+3. With Telnet disabled, verify the existing USB Serial/JTAG loopback and
    burst-regression behavior remains unchanged.
-3. With Telnet enabled and the device restarted, verify UART loopback through a
+4. With Telnet enabled and the device restarted, verify UART loopback through a
    standard Telnet client on the setup AP and on the connected Wi-Fi interface
    when each mode is active. Verify USB bridge payload forwarding is absent.
-4. Verify no-password mode starts forwarding without a login prompt; verify
+5. Verify no-password mode starts forwarding without a login prompt; verify
    configured credentials allow access, wrong credentials are rejected, and
    the third failed attempt closes the session.
-5. Verify the password mask preserves the stored password, clearing the field
+6. Verify the password mask preserves the stored password, clearing the field
    disables authentication while retaining the login name, and a replacement
    password takes effect after restart.
-6. Verify Telnet negotiation bytes do not reach UART, literal `0xFF` bytes
+7. Verify Telnet negotiation bytes do not reach UART, literal `0xFF` bytes
    round-trip, a second simultaneous client is rejected, and a disconnected
    client can reconnect.
-7. Verify socket errors and listener startup failures are logged and never
+8. Verify socket errors and listener startup failures are logged and never
    cause a USB bridge fallback.
 
 ## Risks
