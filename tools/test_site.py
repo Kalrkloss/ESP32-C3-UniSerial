@@ -142,6 +142,64 @@ class SiteContentTests(unittest.TestCase):
             "expected a warning that erasing clears saved Wi-Fi/UART settings",
         )
 
+    def test_warns_every_install_clears_settings_regardless_of_erase_choice(self):
+        """The merged image spans NVS, so every install clears saved settings.
+
+        The site must not promise that declining the erase prompt preserves
+        saved Wi-Fi/UART settings: a normal (non-erase) update still writes
+        the merged image at offset 0, which overlaps NVS and clears it
+        regardless of the installer's erase choice.
+        """
+        lowered = self.html.lower()
+        # The old, false preservation claim must not appear anywhere.
+        self.assertNotRegex(
+            lowered,
+            r"normal (firmware )?update (does not require eras\w*|preserves|does not erase)",
+            "site must not claim a normal update preserves saved settings",
+        )
+        self.assertNotIn(
+            "preserves your saved settings",
+            lowered,
+            "site must not claim saved settings survive a normal update",
+        )
+        # The warning must instead say every install clears settings,
+        # regardless of whether the user declines/accepts the erase prompt.
+        clears_every_install = re.search(
+            r"every (web flasher )?install\w*[^.]*?clears?[^.]*?(wi-?fi|uart)[^.]*?settings",
+            lowered,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(
+            clears_every_install,
+            "expected a warning that every Web Flasher install clears saved "
+            "Wi-Fi/UART settings",
+        )
+        self.assertIn(
+            "regardless",
+            lowered,
+            "expected the warning to say this happens regardless of the erase choice",
+        )
+        self.assertTrue(
+            "save" in lowered or "reconfigur" in lowered,
+            "expected guidance to save/reconfigure settings before/after installing",
+        )
+
+    def test_documents_usb_flashing_only_no_system_messages_during_telnet(self):
+        """USB is flashing-only; release firmware logs are not exposed over USB.
+
+        Release configuration disables the USB secondary console and
+        reassigns UART0 pins, so firmware log/system-message output is never
+        exposed over USB in this release, Telnet or not.
+        """
+        lowered = self.html.lower()
+        self.assertNotIn(
+            "usb remains available for flashing and system messages",
+            lowered,
+            "site must not claim USB carries system messages",
+        )
+        self.assertIn("usb remains available for flashing only", lowered)
+        self.assertIn("not exposed over usb", lowered)
+
     def test_loads_pinned_esp_web_tools_module(self):
         self.assertIn(
             "https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module",

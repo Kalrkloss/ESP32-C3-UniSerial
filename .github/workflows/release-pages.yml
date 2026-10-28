@@ -86,7 +86,9 @@ jobs:
           path: firmware-dist
 
       - name: Generate checksum
-        run: sha256sum firmware-dist/merged-firmware.bin > firmware-dist/SHA256SUMS
+        run: |
+          cd firmware-dist
+          sha256sum merged-firmware.bin > SHA256SUMS
 
       - name: Create GitHub release
         env:

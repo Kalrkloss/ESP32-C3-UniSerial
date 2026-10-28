@@ -145,6 +145,46 @@ class ReleaseWorkflowGatingTests(unittest.TestCase):
         # deploy must use the github-pages environment
         self.assertIn("github-pages", self.deploy_job)
 
+    def test_checksum_is_generated_from_inside_firmware_dist(self):
+        """SHA256SUMS must record the plain basename 'merged-firmware.bin'.
+
+        The download step places both release assets in a single
+        'firmware-dist' folder, so a later 'sha256sum -c SHA256SUMS' run
+        must find a checksum entry for the bare basename
+        'merged-firmware.bin' with the working directory already changed
+        into 'firmware-dist' (or an equivalent 'cd firmware-dist &&' style
+        invocation), not the path-qualified
+        'firmware-dist/merged-firmware.bin', which does not resolve when
+        verifying from inside that directory.
+        """
+        checksum_step = re.search(
+            r"Generate checksum\s*\n\s*run:\s*\|?\s*(.*?)(?=\n\s*- name:|\Z)",
+            self.publish_job,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(checksum_step, "expected a 'Generate checksum' step in publish job")
+        run_text = checksum_step.group(1)
+
+        self.assertRegex(
+            run_text,
+            r"cd\s+firmware-dist",
+            "checksum step must change into firmware-dist before hashing, so "
+            "SHA256SUMS records the bare basename 'merged-firmware.bin'",
+        )
+        self.assertRegex(
+            run_text,
+            r"sha256sum\s+merged-firmware\.bin\s*>\s*SHA256SUMS",
+            "expected 'sha256sum merged-firmware.bin > SHA256SUMS' run from "
+            "inside firmware-dist (not a firmware-dist/-qualified path)",
+        )
+        self.assertNotIn(
+            "firmware-dist/merged-firmware.bin > firmware-dist/SHA256SUMS",
+            run_text,
+            "checksum must not be generated with a firmware-dist/-qualified "
+            "path, which breaks 'sha256sum -c SHA256SUMS' after downloading "
+            "both assets into one folder",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

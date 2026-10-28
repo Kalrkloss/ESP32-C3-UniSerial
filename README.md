@@ -17,7 +17,7 @@ Data is transferred in both directions between the computer and the target MCU.
 - With no saved Wi-Fi network, the device starts an open setup network named `UniSerial-xxxxxx`; open `http://192.168.4.1` for the captive configuration page.
 - The page scans for Wi-Fi networks, saves the selected network, and configures the setup AP channel. In station mode, the router controls the channel. If the saved network cannot be reached, the device falls back to the setup AP.
 - UART baud rate, buffer size, data bits, parity, stop bits, and RX/TX signal inversion are stored in NVS and applied after restart.
-- The optional Telnet UART bridge is disabled by default. When enabled, it replaces USB Serial/JTAG data forwarding; USB remains available for flashing and system messages.
+- The optional Telnet UART bridge is disabled by default. When enabled, it replaces USB Serial/JTAG data forwarding; USB remains available for flashing only. This release disables the secondary USB console and reassigns the UART0 pins, so firmware log output is not exposed over USB, whether or not Telnet is active.
 - The ESP32-C3 USB Serial/JTAG hardware ignores the host's CDC line-coding baud value; the host terminal cannot change the UART baud rate.
 
 After a successful Wi-Fi connection, the same page is available at the device's DHCP address; find it in the router's client list. The 4 MB flash layout uses one large application and NVS; OTA updates are not enabled.

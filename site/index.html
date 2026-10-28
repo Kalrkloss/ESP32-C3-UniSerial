@@ -101,7 +101,7 @@
     </p>
     <ul>
       <li>By default, the Telnet bridge is disabled and all UART traffic is forwarded over USB Serial/JTAG to the host computer.</li>
-      <li>When Telnet is enabled from the configuration page, it replaces USB Serial/JTAG for UART data forwarding. USB remains available for flashing and system messages, but UART data is no longer bridged over USB while Telnet is active.</li>
+      <li>When Telnet is enabled from the configuration page, it replaces USB Serial/JTAG for UART data forwarding. USB remains available for flashing only: this release disables the secondary USB console and reassigns the UART0 pins, so firmware log/system-message output is not exposed over USB whether or not Telnet is active.</li>
       <li>Only one Telnet client can connect at a time; UART output received without an authenticated Telnet client connected is discarded rather than replayed later.</li>
     </ul>
     <p>Enable or disable Telnet, and set its port (any value from 1 to 65535 except 80, which is reserved for the configuration page), from the web configuration page. Changes take effect after the device restarts.</p>
@@ -145,12 +145,15 @@
     </ul>
     <div class="callout danger">
       <p>
-        <strong>Erasing warning:</strong> using the installer's "Erase
-        device" option (or any full-chip erase) removes all saved Wi-Fi and
-        UART configuration settings stored in NVS, in addition to the
-        firmware itself. Only erase the device if you intend to reset it to
-        an unconfigured state; a normal firmware update does not require
-        erasing and preserves your saved settings.
+        <strong>Every install clears saved settings:</strong> every Web
+        Flasher install clears saved Wi-Fi/UART settings, regardless of
+        whether you accept or decline the installer's "Erase device"
+        prompt. Erasing removes your saved Wi-Fi and UART configuration
+        settings from NVS in addition to the firmware itself; so does a
+        normal (non-erase) install, since this release ships a single
+        merged image written starting at flash offset 0 that spans the NVS
+        region. Save your Wi-Fi and UART settings before installing, and
+        reconfigure the device afterward.
       </p>
     </div>
   </section>
