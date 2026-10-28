@@ -75,7 +75,12 @@ class PreparePagesFunctionalTests(unittest.TestCase):
         self.assertEqual(firmware_path.read_bytes(), b"TEST_FIRMWARE_BINARY_DATA")
 
     def test_generates_manifest_with_correct_fields(self):
-        """Verify that prepare_pages generates a manifest with version, chipFamily, path, offset, and erase flag."""
+        """Verify that prepare_pages generates a manifest following ESP Web Tools schema.
+
+        Schema per https://esphome.github.io/esp-web-tools/:
+        - Root: name, version, new_install_prompt_erase
+        - Root: builds array with chipFamily and parts per build
+        """
         prepare_pages(self.site_dir, self.firmware_bin, self.output_dir, "v0.1.0")
 
         manifest_path = self.output_dir / "firmware" / "manifest.json"
@@ -84,11 +89,28 @@ class PreparePagesFunctionalTests(unittest.TestCase):
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest = json.load(f)
 
-        # Verify required fields
+        # Verify root-level required fields
+        self.assertEqual(manifest.get("name"), "ESP32-C3-UniSerial")
         self.assertEqual(manifest.get("version"), "v0.1.0")
-        self.assertEqual(manifest.get("chipFamily"), "ESP32-C3")
-        self.assertEqual(manifest.get("parts"), [{"path": "merged-firmware.bin", "offset": 0}])
         self.assertTrue(manifest.get("new_install_prompt_erase"))
+
+        # Verify builds array structure
+        builds = manifest.get("builds")
+        self.assertIsNotNone(builds, "manifest must have a 'builds' key")
+        self.assertIsInstance(builds, list, "builds must be an array")
+        self.assertEqual(len(builds), 1, "expected exactly one build for ESP32-C3")
+
+        build = builds[0]
+        self.assertEqual(build.get("chipFamily"), "ESP32-C3")
+
+        parts = build.get("parts")
+        self.assertIsNotNone(parts, "build must have a 'parts' key")
+        self.assertIsInstance(parts, list, "parts must be an array")
+        self.assertEqual(len(parts), 1, "expected exactly one part")
+
+        part = parts[0]
+        self.assertEqual(part.get("path"), "merged-firmware.bin")
+        self.assertEqual(part.get("offset"), 0)
 
     def test_missing_firmware_binary_raises_error(self):
         """Verify that prepare_pages raises an explicit filesystem error if binary is missing."""
@@ -144,17 +166,29 @@ class PreparePagesCLITests(unittest.TestCase):
     """Tests for the prepare_pages CLI interface."""
 
     def test_cli_script_runs_with_help(self):
-        """Verify that prepare_pages.py can be invoked with --help."""
-        # This is a basic smoke test that the script is executable
+        """Verify that prepare_pages.py can be invoked with --help and produces expected output."""
+        import subprocess
+        import sys
+
         script_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "tools",
             "prepare_pages.py",
         )
-        if os.path.exists(script_path):
-            # We'll test the actual CLI in integration tests
-            # For now, just verify the file exists
-            self.assertTrue(os.path.isfile(script_path))
+        self.assertTrue(os.path.isfile(script_path), f"Script not found at {script_path}")
+
+        result = subprocess.run(
+            [sys.executable, script_path, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+
+        self.assertEqual(result.returncode, 0, f"--help failed: {result.stderr}")
+        self.assertIn("site-dir", result.stdout, "Expected --site-dir in help output")
+        self.assertIn("firmware-bin", result.stdout, "Expected --firmware-bin in help output")
+        self.assertIn("output-dir", result.stdout, "Expected --output-dir in help output")
+        self.assertIn("version", result.stdout, "Expected --version in help output")
 
 
 if __name__ == "__main__":

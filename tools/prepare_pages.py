@@ -63,12 +63,18 @@ def prepare_pages(site_dir: Path, firmware_bin: Path, output_dir: Path, version:
     merged_firmware_path = firmware_dir / "merged-firmware.bin"
     shutil.copy2(firmware_bin, merged_firmware_path)
 
-    # Generate manifest
+    # Generate manifest following ESP Web Tools schema
+    # https://esphome.github.io/esp-web-tools/ - "Creating your manifest"
     manifest = {
+        "name": "ESP32-C3-UniSerial",
         "version": version,
-        "chipFamily": "ESP32-C3",
-        "parts": [{"path": "merged-firmware.bin", "offset": 0}],
         "new_install_prompt_erase": True,
+        "builds": [
+            {
+                "chipFamily": "ESP32-C3",
+                "parts": [{"path": "merged-firmware.bin", "offset": 0}],
+            }
+        ],
     }
 
     manifest_path = firmware_dir / "manifest.json"
