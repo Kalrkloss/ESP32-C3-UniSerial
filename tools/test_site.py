@@ -7,6 +7,7 @@ sections, relative-only local links, and the browser/erase warnings users
 need before flashing.
 """
 import os
+import posixpath
 import re
 import unittest
 from html.parser import HTMLParser
@@ -58,6 +59,21 @@ def _is_external_or_fragment(value):
     return False
 
 
+def _escapes_site_root(value):
+    """True if a local-relative reference normalizes to above the site root.
+
+    Pages publishing copies only the ``site/`` directory contents to the
+    published root, so a reference such as ``../README.md`` or
+    ``sub/../../x`` must be treated as broken even though it does not start
+    with a leading ``/``.
+    """
+    path_part = value.split("#", 1)[0].split("?", 1)[0]
+    if not path_part:
+        return False
+    normalized = posixpath.normpath(path_part)
+    return normalized == ".." or normalized.startswith("../")
+
+
 class SiteContentTests(unittest.TestCase):
     def setUp(self):
         if not os.path.isfile(INDEX_PATH):
@@ -99,6 +115,12 @@ class SiteContentTests(unittest.TestCase):
             self.assertFalse(
                 value.startswith("/"),
                 f"local {kind} must be relative, found root-relative value: {value}",
+            )
+            self.assertFalse(
+                _escapes_site_root(value),
+                f"local {kind} must stay within the published site root "
+                f"(Task 3 copies only site/ contents to Pages), found a "
+                f"path that traverses above it: {value}",
             )
 
     def test_states_https_and_web_serial_requirement(self):
