@@ -62,13 +62,23 @@ See connection diagram below:
 └────────┘       └────────┘
 ```
 
+### RX burst regression test
+
+For a loopback test, connect ESP32-C3 GPIO21 (UART TX) to GPIO20 (UART RX), then run:
+
+```shell
+python -m pip install pyserial
+python tools/test_usb_serial_jtag_burst.py COM13 --baud 115200 --bytes 65536
+```
+
+Replace `COM13` with the board's USB Serial/JTAG port and set `--baud` to the UART baud configured on the device. The test disables DTR/RTS, removes startup output with a short loopback preflight, and verifies byte count, order, and SHA-256. Use `--bytes 65537` to include a final partial USB packet.
 
 
 ## How to Compile the Project
 
 The project is built and tested with [ESP-IDF](https://github.com/espressif/esp-idf) v6.1. Please read the ESP-IDF documentation for setting up the environment.
 
-The USB Serial/JTAG driver is tracked as a submodule at `components/esp_driver_usb_serial_jtag` from [Kalrkloss/esp32-usb-serial-jtag-rxfix](https://github.com/Kalrkloss/esp32-usb-serial-jtag-rxfix).
+The USB Serial/JTAG driver is tracked as a submodule at `components/esp_driver_usb_serial_jtag` from [Kalrkloss/esp32-usb-serial-jtag-rxfix](https://github.com/Kalrkloss/esp32-usb-serial-jtag-rxfix), pinned to `58639fe0d87cdb4c080a7a7b0f25f7e5323cbaa7`. Initialize it after cloning with `git submodule update --init --recursive`.
 
 - `idf.py menuconfig` can be used to change the default configuration. The project-specific settings are in the "ESP32 Uart Bridge Configuration" sub-menu.
 - `idf.py build` will build the project binaries.
