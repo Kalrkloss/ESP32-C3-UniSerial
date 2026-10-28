@@ -68,6 +68,8 @@ See connection diagram below:
 
 The project is built and tested with [ESP-IDF](https://github.com/espressif/esp-idf) v6.1. Please read the ESP-IDF documentation for setting up the environment.
 
+The USB Serial/JTAG driver is tracked as a submodule at `components/esp_driver_usb_serial_jtag` from [Kalrkloss/esp32-usb-serial-jtag-rxfix](https://github.com/Kalrkloss/esp32-usb-serial-jtag-rxfix).
+
 - `idf.py menuconfig` can be used to change the default configuration. The project-specific settings are in the "ESP32 Uart Bridge Configuration" sub-menu.
 - `idf.py build` will build the project binaries.
 - `idf.py -p PORT flash` will flash the ESP32-C3. The `PORT` is the serial port created by an ESP32-C3 USB-CDC profile connected to the USB D+/D- pins of the ESP32-C3. This serial connection has to be established to upload firmware into the ESP32-C3 and it also used to act as bridge. 
