@@ -110,21 +110,10 @@
   <section id="led">
     <h2>Status LED (connection and activity)</h2>
     <p>
-      The onboard status LED on <strong>GPIO8</strong> indicates connection
-      and data-activity state: it reflects whether a client (USB host or
-      Telnet) is connected, and blinks on UART traffic.
+      The onboard status LED indicates connection and data-activity state:
+      it reflects whether a client (USB host or Telnet) is connected, and
+      blinks on UART traffic.
     </p>
-    <div class="callout warning">
-      <p>
-        <strong>Hardware limitation:</strong> on this board, GPIO8 is also
-        wired as the external-target <strong>BOOT0</strong> control line.
-        The status LED and external-target BOOT0 control cannot operate at
-        the same time: while the status LED is active, GPIO8 must not be
-        used to drive an external target's boot mode, and vice versa. Do not
-        rely on GPIO8 for BOOT0 control if you need the status LED, and do
-        not expect LED activity while GPIO8 is being used for BOOT0 control.
-      </p>
-    </div>
   </section>
 
   <section id="security">
