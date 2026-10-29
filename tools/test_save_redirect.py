@@ -82,13 +82,26 @@ class PortalSpacingTests(unittest.TestCase):
         )
 
 
-class WifiPasswordPreservationTests(unittest.TestCase):
-    def test_portal_has_explicit_clear_wifi_password_control(self):
+class WifiPasswordBehaviorTests(unittest.TestCase):
+    def test_portal_shows_saved_password_mask_and_removes_clear_checkbox(self):
         source = SOURCE.read_text(encoding="utf-8")
-        self.assertIn("wifi_password_clear", source)
-        self.assertIn("Clear saved Wi-Fi password (open network)", source)
+        self.assertIn('name=\\"wifi_password\\"', source)
+        self.assertRegex(
+            source,
+            re.compile(r'name=\\"wifi_password\\".*?value=\\"', re.DOTALL),
+        )
+        self.assertRegex(
+            source,
+            re.compile(
+                r'if \(err == ESP_OK && s_config\.wifi_password\[0\] != \'\\0\'\)'
+                r'\s*\{\s*err = httpd_resp_sendstr_chunk\(req,\s*"\*\*\*\*\*\*"\);',
+                re.DOTALL,
+            ),
+        )
+        self.assertNotIn("wifi_password_clear", source)
+        self.assertNotIn("Clear saved Wi-Fi password", source)
 
-    def test_save_handler_does_not_overwrite_wifi_password_from_blank_field(self):
+    def test_save_handler_clears_blank_and_preserves_unchanged_mask(self):
         source = SOURCE.read_text(encoding="utf-8")
         handler = re.search(
             r"static esp_err_t save_handler\(.*?\n}\n\nstatic esp_err_t redirect_to_portal",
@@ -99,7 +112,7 @@ class WifiPasswordPreservationTests(unittest.TestCase):
             raise AssertionError("save_handler was not found")
         body = handler.group(0)
         self.assertNotIn(
-            'get_form_value(body, "wifi_password", next_config.wifi_password,',
+            "wifi_password_clear",
             body,
         )
         self.assertRegex(
@@ -107,8 +120,18 @@ class WifiPasswordPreservationTests(unittest.TestCase):
             r'get_form_value\(body,\s*"wifi_password",\s*wifi_password,\s*'
             r'APP_WIFI_PASSWORD_MAX \+ 1\)',
         )
-        self.assertRegex(body, r'wifi_password_clear')
-        self.assertRegex(body, r'wifi_password\[0\] != \'\\0\'')
+        self.assertRegex(
+            body,
+            re.compile(
+                r'if \(wifi_password\[0\] == \'\\0\'\)\s*\{\s*'
+                r'next_config\.wifi_password\[0\] = \'\\0\';\s*'
+                r'\} else if \(strcmp\(wifi_password, "\*\*\*\*\*\*"\) != 0 \|\|\s*'
+                r'next_config\.wifi_password\[0\] == \'\\0\'\)\s*\{\s*'
+                r'memcpy\(next_config\.wifi_password, wifi_password, '
+                r'strlen\(wifi_password\) \+ 1\);',
+                re.DOTALL,
+            ),
+        )
 
 
 if __name__ == "__main__":
