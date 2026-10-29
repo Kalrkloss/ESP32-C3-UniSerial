@@ -34,10 +34,11 @@
     <h2>Supported hardware and wiring</h2>
     <p>
       This firmware targets the <strong>ESP32-C3</strong> only; other ESP32
-      family chips are not supported by this release. The board bridges USB
-      Serial/JTAG on one side and a hardware UART on the other, so a target
-      MCU with 3.3&nbsp;V logic UART pins can be programmed and monitored
-      over the same USB cable used to flash the ESP32-C3.
+      family chips are not supported by this release. In USB mode, the board
+      bridges USB Serial/JTAG on the host side and a hardware UART on the
+      target side, so an MCU with 3.3&nbsp;V logic UART pins can be monitored
+      over the same USB cable used to flash the ESP32-C3. Telnet mode uses
+      Wi-Fi instead of USB for host data.
     </p>
     <table>
       <thead>
@@ -50,6 +51,144 @@
       </tbody>
     </table>
     <p>Connect only 3.3&nbsp;V logic-level UART signals; do not connect RS-232 or 5&nbsp;V logic directly.</p>
+    <p class="diagram-intro">
+      The diagrams show the USB host connection and two Telnet network
+      layouts. USB and Telnet modes are mutually exclusive. In every setup,
+      cross the UART data lines (TX to RX, RX to TX) and connect ground to
+      ground. On narrow screens, swipe horizontally to see each full diagram.
+    </p>
+    <div class="connection-diagram-grid">
+      <figure class="connection-diagram">
+        <svg viewBox="0 0 720 380" role="img"
+             aria-labelledby="usb-diagram-title usb-diagram-description">
+          <title id="usb-diagram-title">USB host connection</title>
+          <desc id="usb-diagram-description">
+            A host computer connects by USB to the ESP32-C3 Super Mini.
+            The ESP32-C3 UART connects to an Arduino target board:
+            GPIO21 TX to RX, GPIO20 RX to TX, and ground to ground.
+          </desc>
+          <defs>
+            <marker id="usb-arrow" markerWidth="8" markerHeight="8"
+                    refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="diagram-arrow"></path>
+            </marker>
+          </defs>
+          <rect x="20" y="75" width="180" height="120" rx="12" class="diagram-node"></rect>
+          <rect x="65" y="92" width="90" height="55" rx="4" class="diagram-screen"></rect>
+          <path d="M55 155 H165 L153 166 H67 Z" class="diagram-icon"></path>
+          <text x="110" y="185" text-anchor="middle" class="diagram-label">Host computer</text>
+          <line x1="205" y1="135" x2="490" y2="135" class="diagram-link"
+                marker-start="url(#usb-arrow)" marker-end="url(#usb-arrow)"></line>
+          <text x="347" y="116" text-anchor="middle" class="diagram-label">USB</text>
+          <rect x="500" y="55" width="190" height="160" rx="14" class="diagram-board"></rect>
+          <rect x="550" y="93" width="90" height="58" rx="6" class="diagram-chip"></rect>
+          <rect x="573" y="43" width="44" height="18" rx="4" class="diagram-usb-port"></rect>
+          <text x="595" y="177" text-anchor="middle" class="diagram-board-label">ESP32-C3</text>
+          <text x="595" y="198" text-anchor="middle" class="diagram-board-label">Super Mini</text>
+          <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
+                marker-start="url(#usb-arrow)" marker-end="url(#usb-arrow)"></line>
+          <text x="616" y="256" class="diagram-label">UART</text>
+          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
+          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+        </svg>
+        <figcaption>USB host connection</figcaption>
+      </figure>
+
+      <figure class="connection-diagram">
+        <svg viewBox="0 0 720 380" role="img"
+             aria-labelledby="external-ap-title external-ap-description">
+          <title id="external-ap-title">Telnet via an external Wi-Fi access point</title>
+          <desc id="external-ap-description">
+            The host computer and ESP32-C3 Super Mini connect to the same
+            external Wi-Fi access point. The host reaches the ESP32-C3 by
+            Telnet. Its UART connects to an Arduino target board with
+            GPIO21 TX to RX, GPIO20 RX to TX, and ground to ground.
+          </desc>
+          <defs>
+            <marker id="external-wifi-arrow" markerWidth="8" markerHeight="8"
+                    refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="diagram-arrow"></path>
+            </marker>
+            <marker id="external-uart-arrow" markerWidth="8" markerHeight="8"
+                    refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="diagram-arrow"></path>
+            </marker>
+          </defs>
+          <rect x="10" y="75" width="180" height="120" rx="12" class="diagram-node"></rect>
+          <rect x="55" y="92" width="90" height="55" rx="4" class="diagram-screen"></rect>
+          <path d="M45 155 H155 L143 166 H57 Z" class="diagram-icon"></path>
+          <text x="100" y="185" text-anchor="middle" class="diagram-label">Host computer</text>
+          <line x1="195" y1="135" x2="255" y2="135" class="diagram-link"
+                marker-start="url(#external-wifi-arrow)" marker-end="url(#external-wifi-arrow)"></line>
+          <text x="225" y="116" text-anchor="middle" class="diagram-small-label">Wi-Fi</text>
+          <rect x="265" y="75" width="180" height="120" rx="12" class="diagram-ap"></rect>
+          <path d="M322 119 Q355 89 388 119 M332 132 Q355 113 378 132"
+                class="diagram-wifi-icon"></path>
+          <circle cx="355" cy="142" r="4" class="diagram-icon"></circle>
+          <text x="355" y="177" text-anchor="middle" class="diagram-label">External Wi-Fi AP</text>
+          <line x1="450" y1="135" x2="490" y2="135" class="diagram-link"
+                marker-start="url(#external-wifi-arrow)" marker-end="url(#external-wifi-arrow)"></line>
+          <text x="470" y="116" text-anchor="middle" class="diagram-small-label">Wi-Fi</text>
+          <rect x="500" y="55" width="190" height="160" rx="14" class="diagram-board"></rect>
+          <rect x="550" y="93" width="90" height="58" rx="6" class="diagram-chip"></rect>
+          <rect x="573" y="43" width="44" height="18" rx="4" class="diagram-usb-port"></rect>
+          <text x="595" y="177" text-anchor="middle" class="diagram-board-label">ESP32-C3</text>
+          <text x="595" y="198" text-anchor="middle" class="diagram-board-label">Super Mini</text>
+          <text x="355" y="232" text-anchor="middle" class="diagram-callout">Telnet from host to ESP32-C3</text>
+          <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
+                marker-start="url(#external-uart-arrow)" marker-end="url(#external-uart-arrow)"></line>
+          <text x="616" y="256" class="diagram-label">UART</text>
+          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
+          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+        </svg>
+        <figcaption>Telnet via an external Wi-Fi access point</figcaption>
+      </figure>
+
+      <figure class="connection-diagram">
+        <svg viewBox="0 0 720 380" role="img"
+             aria-labelledby="device-ap-title device-ap-description">
+          <title id="device-ap-title">Telnet via the ESP32-C3 setup access point</title>
+          <desc id="device-ap-description">
+            The host computer connects directly to the ESP32-C3 Super Mini's
+            UniSerial setup access point and uses Telnet. The ESP32-C3 UART
+            connects to an Arduino target board with GPIO21 TX to RX,
+            GPIO20 RX to TX, and ground to ground.
+          </desc>
+          <defs>
+            <marker id="device-ap-arrow" markerWidth="8" markerHeight="8"
+                    refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="diagram-arrow"></path>
+            </marker>
+            <marker id="device-uart-arrow" markerWidth="8" markerHeight="8"
+                    refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M0,0 L8,4 L0,8 z" class="diagram-arrow"></path>
+            </marker>
+          </defs>
+          <rect x="20" y="75" width="180" height="120" rx="12" class="diagram-node"></rect>
+          <rect x="65" y="92" width="90" height="55" rx="4" class="diagram-screen"></rect>
+          <path d="M55 155 H165 L153 166 H67 Z" class="diagram-icon"></path>
+          <text x="110" y="185" text-anchor="middle" class="diagram-label">Host computer</text>
+          <line x1="205" y1="135" x2="490" y2="135" class="diagram-link"
+                marker-start="url(#device-ap-arrow)" marker-end="url(#device-ap-arrow)"></line>
+          <text x="347" y="116" text-anchor="middle" class="diagram-label">Wi-Fi + Telnet</text>
+          <rect x="500" y="55" width="190" height="160" rx="14" class="diagram-board"></rect>
+          <rect x="550" y="93" width="90" height="50" rx="6" class="diagram-chip"></rect>
+          <rect x="573" y="43" width="44" height="18" rx="4" class="diagram-usb-port"></rect>
+          <text x="595" y="166" text-anchor="middle" class="diagram-board-label">ESP32-C3</text>
+          <text x="595" y="186" text-anchor="middle" class="diagram-board-label">Super Mini</text>
+          <text x="595" y="204" text-anchor="middle" class="diagram-board-label">AP: UniSerial-xxxxxx</text>
+          <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
+                marker-start="url(#device-uart-arrow)" marker-end="url(#device-uart-arrow)"></line>
+          <text x="616" y="256" class="diagram-label">UART</text>
+          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
+          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+        </svg>
+        <figcaption>Telnet via the ESP32-C3 setup access point</figcaption>
+      </figure>
+    </div>
   </section>
 
   <section id="setup">

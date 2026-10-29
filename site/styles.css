@@ -103,6 +103,123 @@ table {
   margin: 1rem 0;
 }
 
+.diagram-intro {
+  margin: 1.25rem 0 0.75rem;
+}
+
+.connection-diagram-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+  gap: 1rem;
+}
+
+.connection-diagram {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 0;
+  overflow-x: auto;
+  padding: 0.75rem;
+}
+
+.connection-diagram svg {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.connection-diagram figcaption {
+  font-weight: 600;
+  margin: 0.5rem 0.25rem 0.25rem;
+}
+
+.diagram-node {
+  fill: #f6f8fa;
+  stroke: #57606a;
+  stroke-width: 2;
+}
+
+.diagram-screen {
+  fill: #dbeafe;
+  stroke: #2563eb;
+  stroke-width: 2;
+}
+
+.diagram-icon {
+  fill: #57606a;
+}
+
+.diagram-board {
+  fill: #dcfce7;
+  stroke: #15803d;
+  stroke-width: 3;
+}
+
+.diagram-chip {
+  fill: #374151;
+}
+
+.diagram-usb-port {
+  fill: #9ca3af;
+  stroke: #374151;
+  stroke-width: 2;
+}
+
+.diagram-target {
+  fill: #dbeafe;
+  stroke: #2563eb;
+  stroke-width: 2;
+}
+
+.diagram-ap {
+  fill: #fef3c7;
+  stroke: #b45309;
+  stroke-width: 2;
+}
+
+.diagram-wifi-icon {
+  fill: none;
+  stroke: #92400e;
+  stroke-linecap: round;
+  stroke-width: 5;
+}
+
+.diagram-link {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 3;
+}
+
+.diagram-arrow {
+  fill: #2563eb;
+}
+
+.diagram-label,
+.diagram-board-label,
+.diagram-small-label,
+.diagram-callout {
+  fill: #1b1f23;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.diagram-label {
+  font-size: 16px;
+}
+
+.diagram-board-label {
+  fill: #14532d;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.diagram-small-label {
+  font-size: 13px;
+}
+
+.diagram-callout {
+  font-size: 15px;
+  font-weight: 600;
+}
+
 th, td {
   border: 1px solid var(--border);
   padding: 0.5rem 0.75rem;
@@ -158,6 +275,10 @@ footer {
 
   section h2 {
     font-size: 1.2rem;
+  }
+
+  .connection-diagram svg {
+    min-width: 40rem;
   }
 
   table, thead, tbody, th, td, tr {

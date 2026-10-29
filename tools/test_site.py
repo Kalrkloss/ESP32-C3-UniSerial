@@ -14,6 +14,7 @@ from html.parser import HTMLParser
 
 SITE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "site")
 INDEX_PATH = os.path.join(SITE_DIR, "index.html")
+STYLES_PATH = os.path.join(SITE_DIR, "styles.css")
 
 
 class _LinkCollector(HTMLParser):
@@ -107,6 +108,54 @@ class SiteContentTests(unittest.TestCase):
         }
         missing = required_ids - self.parser.ids
         self.assertFalse(missing, f"missing required section anchors: {missing}")
+
+    def test_hardware_section_has_all_three_connection_diagrams(self):
+        hardware_match = re.search(
+            r'<section id="hardware">(.*?)</section>', self.html, re.DOTALL
+        )
+        self.assertIsNotNone(hardware_match, "expected the hardware section")
+        hardware = hardware_match.group(1)
+        figures = re.findall(r"<figure\b.*?</figure>", hardware, re.DOTALL)
+        self.assertEqual(len(figures), 3)
+        figure_text = "\n".join(figures).lower()
+        for expected in (
+            "usb host connection",
+            "telnet via an external wi-fi access point",
+            "telnet via the esp32-c3 setup access point",
+            "arduino",
+            "gpio21",
+            "gpio20",
+            "ground to ground",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected, figure_text)
+
+    def test_connection_diagrams_have_accessible_descriptions_and_responsive_layout(self):
+        hardware_match = re.search(
+            r'<section id="hardware">(.*?)</section>', self.html, re.DOTALL
+        )
+        self.assertIsNotNone(hardware_match, "expected the hardware section")
+        hardware = hardware_match.group(1)
+        self.assertEqual(len(re.findall(r'<svg\b[^>]*role="img"', hardware)), 3)
+        self.assertEqual(len(re.findall(r"<title\b", hardware)), 3)
+        self.assertEqual(len(re.findall(r"<desc\b", hardware)), 3)
+        self.assertEqual(len(re.findall(r"<figcaption\b", hardware)), 3)
+
+        with open(STYLES_PATH, "r", encoding="utf-8") as handle:
+            styles = handle.read()
+        self.assertRegex(
+            styles,
+            r"\.connection-diagram-grid\s*\{[^}]*"
+            r"grid-template-columns:\s*repeat\(auto-fit",
+        )
+        self.assertRegex(
+            styles,
+            re.compile(
+                r"@media \(max-width: 640px\).*?\.connection-diagram svg\s*\{"
+                r"[^}]*min-width:\s*40rem",
+                re.DOTALL,
+            ),
+        )
 
     def test_local_links_are_relative(self):
         for kind, value in self.parser.local_refs:
