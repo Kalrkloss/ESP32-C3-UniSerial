@@ -64,7 +64,7 @@
           <title id="usb-diagram-title">USB host connection</title>
           <desc id="usb-diagram-description">
             A host computer connects by USB to the ESP32-C3 Super Mini.
-            The ESP32-C3 UART connects to an Arduino target board:
+            The ESP32-C3 UART connects to a target board (e.g. microcontroller):
             GPIO21 TX to RX, GPIO20 RX to TX, and ground to ground.
           </desc>
           <defs>
@@ -88,9 +88,12 @@
           <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
                 marker-start="url(#usb-arrow)" marker-end="url(#usb-arrow)"></line>
           <text x="616" y="256" class="diagram-label">UART</text>
-          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="500" y="290" width="190" height="80" rx="12" class="diagram-target"></rect>
           <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
-          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+          <text aria-label="Target (e.g. microcontroller)" text-anchor="middle" class="diagram-label">
+            <tspan x="595" y="345">Target</tspan>
+            <tspan x="595" y="363">(e.g. microcontroller)</tspan>
+          </text>
         </svg>
         <figcaption>USB host connection</figcaption>
       </figure>
@@ -102,7 +105,7 @@
           <desc id="external-ap-description">
             The host computer and ESP32-C3 Super Mini connect to the same
             external Wi-Fi access point. The host reaches the ESP32-C3 by
-            Telnet. Its UART connects to an Arduino target board with
+            telnet. Its UART connects to a target board (e.g. microcontroller) with
             GPIO21 TX to RX, GPIO20 RX to TX, and ground to ground.
           </desc>
           <defs>
@@ -139,9 +142,12 @@
           <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
                 marker-start="url(#external-uart-arrow)" marker-end="url(#external-uart-arrow)"></line>
           <text x="616" y="256" class="diagram-label">UART</text>
-          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="500" y="290" width="190" height="80" rx="12" class="diagram-target"></rect>
           <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
-          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+          <text aria-label="Target (e.g. microcontroller)" text-anchor="middle" class="diagram-label">
+            <tspan x="595" y="345">Target</tspan>
+            <tspan x="595" y="363">(e.g. microcontroller)</tspan>
+          </text>
         </svg>
         <figcaption>Telnet via an external Wi-Fi access point</figcaption>
       </figure>
@@ -153,7 +159,7 @@
           <desc id="device-ap-description">
             The host computer connects directly to the ESP32-C3 Super Mini's
             UniSerial setup access point and uses Telnet. The ESP32-C3 UART
-            connects to an Arduino target board with GPIO21 TX to RX,
+            connects to a target board (e.g. microcontroller) with GPIO21 TX to RX,
             GPIO20 RX to TX, and ground to ground.
           </desc>
           <defs>
@@ -182,9 +188,12 @@
           <line x1="595" y1="220" x2="595" y2="280" class="diagram-link"
                 marker-start="url(#device-uart-arrow)" marker-end="url(#device-uart-arrow)"></line>
           <text x="616" y="256" class="diagram-label">UART</text>
-          <rect x="500" y="290" width="190" height="70" rx="12" class="diagram-target"></rect>
+          <rect x="500" y="290" width="190" height="80" rx="12" class="diagram-target"></rect>
           <rect x="570" y="304" width="50" height="24" rx="4" class="diagram-chip"></rect>
-          <text x="595" y="349" text-anchor="middle" class="diagram-label">Arduino target</text>
+          <text aria-label="Target (e.g. microcontroller)" text-anchor="middle" class="diagram-label">
+            <tspan x="595" y="345">Target</tspan>
+            <tspan x="595" y="363">(e.g. microcontroller)</tspan>
+          </text>
         </svg>
         <figcaption>Telnet via the ESP32-C3 setup access point</figcaption>
       </figure>
