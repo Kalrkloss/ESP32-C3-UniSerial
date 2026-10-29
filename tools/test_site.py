@@ -122,13 +122,14 @@ class SiteContentTests(unittest.TestCase):
             "usb host connection",
             "telnet via an external wi-fi access point",
             "telnet via the esp32-c3 setup access point",
-            "arduino",
+            "target (e.g. microcontroller)",
             "gpio21",
             "gpio20",
             "ground to ground",
         ):
             with self.subTest(expected=expected):
                 self.assertIn(expected, figure_text)
+        self.assertNotIn("arduino target", figure_text)
 
     def test_connection_diagrams_have_accessible_descriptions_and_responsive_layout(self):
         hardware_match = re.search(
