@@ -97,11 +97,6 @@ python tools/test_usb_serial_jtag_burst.py COM13 --baud 115200 --bytes 65536
 
 Replace `COM13` with the board's USB Serial/JTAG port and set `--baud` to the UART baud configured on the device. The test disables DTR/RTS, removes startup output with a short loopback preflight, and verifies byte count, order, and SHA-256. Use `--bytes 65537` to include a final partial USB packet.
 
-### Status LED hardware limitation
-
-The SuperMini status LED intentionally uses GPIO8. On this hardware, GPIO8 is also wired as the external-target BOOT0 control. While status LED activity is enabled, GPIO8 must not be used for external target boot control.
-
-
 ## How to Compile the Project
 
 The project is built and tested with [ESP-IDF](https://github.com/espressif/esp-idf) v6.1. Please read the ESP-IDF documentation for setting up the environment.
