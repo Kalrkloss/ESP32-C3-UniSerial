@@ -131,6 +131,102 @@ class SiteContentTests(unittest.TestCase):
                 self.assertIn(expected, figure_text)
         self.assertNotIn("arduino target", figure_text)
 
+    def test_configuration_section_has_static_portal_preview(self):
+        configuration_match = re.search(
+            r'<section id="configuration">(.*?)</section>', self.html, re.DOTALL
+        )
+        self.assertIsNotNone(configuration_match, "expected the configuration section")
+        configuration = configuration_match.group(1)
+        preview_match = re.search(
+            r'<figure class="portal-preview".*?</figure>',
+            configuration,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(preview_match, "expected a configuration-page preview")
+        preview = preview_match.group(0)
+        for expected in (
+            "Open setup network",
+            "Scanned networks",
+            "Network name (SSID)",
+            "Wi-Fi password",
+            "Leave the password empty to remove the saved password",
+            "unchanged",
+            "mask keeps the saved password",
+            "Setup AP channel",
+            "Enable Telnet UART bridge",
+            "Telnet username",
+            "Telnet password",
+            "Baud rate",
+            "Buffer size",
+            "Data bits",
+            "Parity",
+            "Stop bits",
+            "Invert RX signal",
+            "Invert TX signal",
+            "Save and restart",
+            "example values only",
+            "not interactive",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected.lower(), preview.lower())
+        self.assertIn('<input type="password" value="******">', preview)
+        self.assertNotIn("Clear saved Wi-Fi password", preview)
+        self.assertGreaterEqual(
+            len(re.findall(r"<fieldset\b[^>]*\bdisabled(?:\s|>)", preview)),
+            3,
+            "preview control groups must be non-interactive",
+        )
+        with open(STYLES_PATH, "r", encoding="utf-8") as handle:
+            styles = handle.read()
+        self.assertRegex(
+            styles,
+            re.compile(
+                r"@media \(max-width: 640px\).*?\.portal-preview-fields\s*\{"
+                r"[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)",
+                re.DOTALL,
+            ),
+        )
+
+    def test_wifi_password_documentation_matches_portal_behavior(self):
+        configuration_match = re.search(
+            r'<section id="configuration">(.*?)</section>', self.html, re.DOTALL
+        )
+        self.assertIsNotNone(configuration_match, "expected the configuration section")
+        plain_text = re.sub(r"<[^>]+>", " ", configuration_match.group(1)).lower()
+        plain_text = re.sub(r"\s+", " ", plain_text)
+        self.assertIn(
+            "leave the password empty to remove the saved password",
+            plain_text,
+        )
+        self.assertIn(
+            "unchanged ****** mask keeps the saved password",
+            plain_text,
+        )
+        self.assertNotIn("clear saved wi-fi password", plain_text)
+
+    def test_uart_inversion_options_are_stacked_rx_then_tx(self):
+        uart_match = re.search(
+            r"<legend>UART</legend>(.*?)</fieldset>",
+            self.html,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(uart_match, "expected the UART preview fieldset")
+        labels = re.findall(
+            r'<label class="([^"]*)">\s*<input type="checkbox">.*?'
+            r"Invert (?:RX|TX) signal\s*</label>",
+            uart_match.group(1),
+            re.DOTALL,
+        )
+        self.assertEqual(len(labels), 2)
+        self.assertTrue(
+            all("portal-preview-wide" in classes.split() for classes in labels),
+            "each inversion option should occupy a full row",
+        )
+        self.assertLess(
+            uart_match.group(1).index("Invert RX signal"),
+            uart_match.group(1).index("Invert TX signal"),
+        )
+
     def test_connection_diagrams_have_accessible_descriptions_and_responsive_layout(self):
         hardware_match = re.search(
             r'<section id="hardware">(.*?)</section>', self.html, re.DOTALL

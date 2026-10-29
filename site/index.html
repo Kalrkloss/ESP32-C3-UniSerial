@@ -224,14 +224,109 @@
       <li>Buffer size</li>
       <li>RX/TX signal inversion</li>
     </ul>
+    <figure class="portal-preview" aria-labelledby="portal-preview-caption">
+      <div class="portal-preview-browser" aria-hidden="true">
+        <span class="portal-preview-dots"><i></i><i></i><i></i></span>
+        <span class="portal-preview-address">http://192.168.4.1</span>
+      </div>
+      <div class="portal-preview-content">
+        <h3>ESP32-C3-UniSerial</h3>
+        <p class="portal-preview-warning">
+          <strong>Open setup network:</strong> settings and Wi-Fi credentials
+          use unencrypted HTTP. Use only in a trusted area.
+        </p>
+        <form class="portal-preview-form" aria-label="Illustrative configuration page">
+          <fieldset disabled>
+            <legend>Wi-Fi</legend>
+            <div class="portal-preview-fields">
+              <label>Scanned networks
+                <select><option>Example Wi-Fi (-48 dBm, ch 6)</option></select>
+              </label>
+              <label>Network name (SSID)
+                <input type="text" value="Example Wi-Fi">
+              </label>
+              <label>Wi-Fi password
+                <input type="password" value="******">
+              </label>
+              <p class="portal-preview-help">
+                Leave the password empty to remove the saved password. An
+                unchanged <code>******</code> mask keeps the saved password.
+              </p>
+              <label>Setup AP channel (1-13)
+                <input type="number" value="6">
+              </label>
+              <p class="portal-preview-help">
+                When connected as a station, the router selects the Wi-Fi channel.
+              </p>
+            </div>
+          </fieldset>
+          <fieldset disabled>
+            <legend>Telnet</legend>
+            <div class="portal-preview-fields">
+              <label class="portal-preview-check portal-preview-wide">
+                <input type="checkbox" checked>
+                Enable Telnet UART bridge
+              </label>
+              <label>Port (1-65535; 80 is reserved)
+                <input type="number" value="23">
+              </label>
+              <label>Telnet username
+                <input type="text" value="example-user">
+              </label>
+              <label>Telnet password
+                <input type="password" value="sample">
+              </label>
+              <p class="portal-preview-help">
+                Leave the password empty to disable Telnet authentication. An
+                unchanged <code>******</code> mask keeps the saved password.
+              </p>
+              <p class="portal-preview-warning portal-preview-wide">
+                Port 80 is reserved for the configuration page.
+              </p>
+            </div>
+          </fieldset>
+          <fieldset disabled>
+            <legend>UART</legend>
+            <div class="portal-preview-fields">
+              <label>Baud rate
+                <input type="number" value="115200">
+              </label>
+              <label>Buffer size
+                <select><option>1024 bytes</option></select>
+              </label>
+              <label>Data bits
+                <select><option>8</option></select>
+              </label>
+              <label>Parity
+                <select><option>None</option></select>
+              </label>
+              <label>Stop bits
+                <select><option>1</option></select>
+              </label>
+              <label class="portal-preview-check portal-preview-wide">
+                <input type="checkbox">
+                Invert RX signal
+              </label>
+              <label class="portal-preview-check portal-preview-wide">
+                <input type="checkbox">
+                Invert TX signal
+              </label>
+            </div>
+          </fieldset>
+          <button type="button" disabled>Save and restart</button>
+        </form>
+      </div>
+      <figcaption id="portal-preview-caption">
+        Configuration page preview. Example values only; these controls are
+        not interactive and do not change the device.
+      </figcaption>
+    </figure>
     <div class="callout">
       <p>
-        <strong>Wi-Fi password field behavior:</strong> leaving the password
-        field blank when saving preserves the currently stored Wi-Fi
-        password. To remove a saved password (for example to configure an
-        open network), use the explicit "clear password" checkbox on the
-        configuration page; only that explicit action clears the stored
-        credential.
+        <strong>Wi-Fi password field behavior:</strong> a saved password is
+        shown as <code>******</code>. Saving that unchanged mask preserves the
+        stored password; leaving the field empty removes it, and entering a
+        different value replaces it.
       </p>
     </div>
     <p>
